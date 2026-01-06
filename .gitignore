@@ -1,0 +1,55 @@
+# =====================
+# Flutter / Dart
+# =====================
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+*.apk
+*.aab
+.idea/
+*.iml
+
+# =====================
+# Python / Flask
+# =====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.venv_insight/
+.env
+*.sqlite3
+
+# =====================
+# Java / Spring Boot
+# =====================
+# Build output
+/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IntelliJ / Eclipse
+*.iml
+.idea/
+*.ipr
+*.iws
+*.classpath
+*.project
+*.settings/
+
+# Maven / Gradle
+.mvn/
+.mvn/wrapper/maven-wrapper.jar
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# OS files
+.DS_Store
+Thumbs.db
