@@ -31,6 +31,9 @@ __pycache__/
 *.class
 *.jar
 *.war
+# Ignore Java libraries
+**/lib/
+**/oracleJdk-25/
 *.ear
 
 # IntelliJ / Eclipse
