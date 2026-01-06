@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hệ Thống Điểm Danh</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { background-color: #f0f2f5; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .day-group { margin-bottom: 40px; }
+        .date-header { 
+            background: #0d6efd; 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 8px 8px 0 0; 
+            font-size: 1.2rem; 
+            font-weight: bold;
+            display: inline-block;
+        }
+        .table-container { 
+            background: white; 
+            padding: 0; 
+            border-radius: 0 8px 8px 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            overflow: hidden;
+        }
+        .header-title { color: #0d6efd; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .pass { color: #198754; font-weight: bold; background: #d1e7dd; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; }
+        .table { margin-bottom: 0; }
+        .table thead { background-color: #212529; color: white; }
+        .table th { vertical-align: middle; padding: 15px; }
+        .table td { vertical-align: middle; padding: 12px; }
+        .btn-excel {
+            background-color: #198754;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .btn-excel:hover { background-color: #146c43; color: white; }
+    </style>
+    <meta http-equiv="refresh" content="5">
+</head>
+<body>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center bg-white p-3 mb-3 shadow-sm rounded">
+        <h4 class="m-0 text-primary fw-bold">Hệ Thống Điểm Danh</h4>
+        <div>
+            <span class="fw-bold me-3 text-secondary" th:if="${user != null}">👤 <span th:text="${user.fullName}"></span></span>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">Đăng Xuất</a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-12"> 
+            <h2 class="text-center mb-4 header-title">📋 BÁO CÁO ĐIỂM DANH</h2>
+            <div class="text-end">
+                <a href="/employees" class="btn btn-primary me-2">👥 Quản Lý Nhân Sự</a>
+                <button onclick="exportExcel()" class="btn btn-excel mb-0">📥 Xuất File Excel</button>
+            </div>
+            <br>
+            <div th:each="entry : ${groupedLogs}" class="day-group">
+                <div class="date-header">
+                    📅 Ngày: <span th:text="${entry.key}"></span>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover table-bordered text-center align-middle mb-0 data-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Thời Gian</th>
+                                <th>CCCD</th>
+                                <th>Công Ty / Đơn Vị</th>
+                                <th>Họ Tên / Nhân Viên</th>
+                                <th>% (AI)</th>
+                                <th>Kết Quả</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${entry.value}">
+                                <td th:text="${#temporals.format(l.timestamp, 'HH:mm:ss')}"></td>
+                                <td class="fw-bold text-secondary" th:text="${l.cccd}"></td>
+                                <td class="fw-bold text-primary" th:text="${l.org != null ? l.org.name : '-'}"></td>
+                                <td class="text-start ps-4">
+                                    <div th:if="${l.employee != null}">
+                                        <span th:text="${l.employee.name}" class="fw-bold text-dark fs-6"></span>
+                                        <div style="font-size: 0.8rem;" class="text-muted">
+                                            <i class="bi bi-person-badge"></i> 
+                                            <span th:text="${l.employee.position}"></span>
+                                        </div>
+                                    </div>
+                                    <div th:if="${l.employee == null}">
+                                        <div th:if="${l.capturedName != null}">
+                                            <span th:text="${l.capturedName}" class="fw-bold text-danger"></span>
+                                            <span class="badge bg-warning text-dark ms-2">Khách</span>
+                                            <a th:href="@{/employees(cccd=${l.cccd}, name=${l.capturedName})}" 
+                                               class="btn btn-outline-success btn-sm ms-2" 
+                                               title="Thêm làm nhân viên chính thức">➕ Thêm</a>
+                                        </div>
+                                        <div th:if="${l.capturedName == null}">
+                                            <span class="text-muted fst-italic">Không xác định</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:text="${#numbers.formatDecimal(l.score * 100, 1, 1) + '%'}"></span>
+                                </td>
+                                <td>
+                                    <span class="pass">ĐẠT</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div th:if="${groupedLogs.empty}" class="text-center text-muted fst-italic py-4">
+                Chưa có dữ liệu điểm danh nào...
+            </div>
+        </div>
+    </div>
+</div>
+<script th:inline="none">
+    function exportExcel() {
+        var wb = XLSX.utils.book_new();
+        var groups = document.querySelectorAll('.day-group');
+        var hasData = false;
+        groups.forEach(function(group) {
+            hasData = true;
+            var dateText = group.querySelector('.date-header span').innerText.trim();
+            var sheetName = dateText.replace(/\//g, "-");
+            var wsData = [
+                ["BÁO CÁO NGÀY: " + dateText], 
+                ["Giờ", "CCCD", "Công Ty", "Họ Tên", "%", "Kết Quả"] 
+            ]; 
+            var rows = group.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {
+                var cols = row.querySelectorAll('td');
+                var nameText = cols[3].innerText.replace(/\n/g, " ").trim(); 
+                var rowData = [
+                    cols[0].innerText,
+                    cols[1].innerText, 
+                    cols[2].innerText, 
+                    nameText,         
+                    cols[4].innerText, 
+                    "ĐẠT"             
+                ];
+                wsData.push(rowData);
+            });
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            ws['!cols'] = [
+                {wch: 15}, {wch: 20}, {wch: 25}, {wch: 35}, {wch: 10}, {wch: 10}
+            ];
+            if(!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: {r:0, c:0}, e: {r:0, c:5} });
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+        if (!hasData) {
+            alert("Không có dữ liệu để xuất!");
+            return;
+        }
+        XLSX.writeFile(wb, "BaoCao_DiemDanh.xlsx");
+    }
+</script>
+</body>
+</html>
