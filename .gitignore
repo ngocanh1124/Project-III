@@ -56,3 +56,4 @@ out/
 # OS files
 .DS_Store
 Thumbs.db
+/Prj3/src/main/java/prj3/example/Prj3/oracleJdk-25/
