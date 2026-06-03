@@ -103,12 +103,12 @@ export default function Settings() {
     try {
       const res = await fetch(`${url}/actuator/health`, { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
-        toast('sys', `✓ Kết nối thành công tới ${url}`);
+        toast('sys', `Kết nối thành công tới ${url}`);
       } else {
         toast('sys', `Server phản hồi HTTP ${res.status} — kiểm tra lại URL`, 'error');
       }
     } catch {
-      toast('sys', `✗ Không thể kết nối tới ${url} — kiểm tra server đang chạy và URL đúng`, 'error');
+      toast('sys', `Không thể kết nối tới ${url} — kiểm tra server đang chạy và URL đúng`, 'error');
     } finally {
       setSaving((s) => ({ ...s, sys: false }));
     }
@@ -247,7 +247,6 @@ export default function Settings() {
                 placeholder="http://192.168.x.x:8080"
               />
               <small style={{ fontSize: 11, color: '#9ca3af', display: 'block', marginTop: 4 }}>
-                URL gốc của Java Spring Boot backend — thay đổi có hiệu lực ngay, không cần reload trang
               </small>
             </div>
             <div className="form-group">
