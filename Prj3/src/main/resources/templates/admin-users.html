@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Quản Lý User - Hệ Thống Điểm Danh</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(to right, #007bff, #0056b3); }
+        .card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .success-msg { color: green; font-weight: bold; }
+        .error-msg { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">✓ Quản Lý User - Điểm Danh Khuôn Mặt</span>
+            <span th:if="${user}" class="text-white">
+                Xin chào: <strong th:text="${user.fullName}"></strong> | 
+                <a href="/logout" class="text-white">Đăng Xuất</a>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Tạo user mới -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">➕ Tạo User Mới</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="createUserForm">
+                            <div class="mb-3">
+                                <label class="form-label">Tên Đăng Nhập</label>
+                                <input type="text" id="newUsername" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Họ Tên</label>
+                                <input type="text" id="newFullName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tổ Chức</label>
+                                <select id="newOrgId" class="form-control" required>
+                                    <option value="">-- Chọn Tổ Chức --</option>
+                                    <option th:each="org : ${organizations}" th:value="${org.id}" th:text="${org.name}"></option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-success w-100" onclick="createNewUser()">Tạo User</button>
+                        </form>
+                        <div id="createResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách user theo tổ chức -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">📋 Danh Sách User</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Chọn Tổ Chức</label>
+                            <select id="orgFilter" class="form-control" onchange="loadUsers()">
+                                <option value="">-- Tất Cả --</option>
+                                <option th:each="org : ${organizations}" th:value="${org.id}" th:text="${org.name}"></option>
+                            </select>
+                        </div>
+                        <div id="userList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hiệu chỉnh mật khẩu user -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">🔐 Đặt Lại Mật Khẩu</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">User ID</label>
+                            <input type="number" id="resetUserId" class="form-control" placeholder="Nhập User ID">
+                        </div>
+                        <button type="button" class="btn btn-warning w-100" onclick="resetPassword()">Đặt Lại Mật Khẩu</button>
+                        <div id="resetResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createNewUser() {
+            const username = document.getElementById('newUsername').value;
+            const fullName = document.getElementById('newFullName').value;
+            const orgId = document.getElementById('newOrgId').value;
+
+            if (!username || !fullName || !orgId) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return;
+            }
+
+            fetch('/api/admin/users/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${username}&fullName=${fullName}&organizationId=${orgId}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                const result = document.getElementById('createResult');
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✓ Thành Công!</strong><br>
+                            Username: <strong>${data.username}</strong><br>
+                            Mật khẩu tạm: <strong style="font-size: 14px; color: red;">${data.tempPassword}</strong><br>
+                            <em>${data.note}</em>
+                        </div>
+                    `;
+                    document.getElementById('createUserForm').reset();
+                } else {
+                    result.innerHTML = `<div class="alert alert-danger"><strong>✗ Lỗi:</strong> ${data.error}</div>`;
+                }
+            });
+        }
+
+        function loadUsers() {
+            const orgId = document.getElementById('orgFilter').value || 1;
+            if (!orgId) {
+                document.getElementById('userList').innerHTML = '<p>Chọn tổ chức để xem user</p>';
+                return;
+            }
+
+            fetch(`/api/admin/organizations/${orgId}/users`)
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('userList');
+                if (data.success && data.users) {
+                    let html = `<h6>${data.organizationName} (${data.users.length} user)</h6><table class="table table-sm">`;
+                    data.users.forEach(u => {
+                        html += `
+                            <tr>
+                                <td>${u.id}</td>
+                                <td>${u.username}</td>
+                                <td>${u.fullName}</td>
+                                <td><button class="btn btn-danger btn-sm" onclick="resetPassword(${u.id})">Reset PW</button></td>
+                            </tr>
+                        `;
+                    });
+                    html += '</table>';
+                    list.innerHTML = html;
+                } else {
+                    list.innerHTML = '<p class="error-msg">Không tìm thấy user</p>';
+                }
+            });
+        }
+
+        function resetPassword(userId) {
+            const id = userId || document.getElementById('resetUserId').value;
+            if (!id) {
+                alert('Vui lòng nhập User ID!');
+                return;
+            }
+
+            fetch(`/api/admin/users/${id}/reset-password`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                const result = document.getElementById('resetResult');
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>✓ Đặt lại mật khẩu thành công!</strong><br>
+                            Mật khẩu mới: <strong style="color: red; font-size: 14px;">${data.newPassword}</strong>
+                        </div>
+                    `;
+                    loadUsers();
+                } else {
+                    result.innerHTML = `<div class="alert alert-danger"><strong>✗ Lỗi:</strong> ${data.error}</div>`;
+                }
+            });
+        }
+
+        // Load users on page load
+        window.onload = function() {
+            loadUsers();
+        };
+    </script>
+</body>
+</html>

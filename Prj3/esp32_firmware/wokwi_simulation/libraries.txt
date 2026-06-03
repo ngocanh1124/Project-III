@@ -1,0 +1,6 @@
+# Wokwi Library Dependencies
+# Tệp này cần thiết khi dùng trên https://wokwi.com
+# Paste nội dung này vào ô "libraries.txt" trong project Wokwi online
+
+PubSubClient
+ArduinoJson

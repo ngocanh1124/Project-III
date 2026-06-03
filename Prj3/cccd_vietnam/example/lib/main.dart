@@ -12,8 +12,16 @@ import 'package:cccd_vietnam/src/proto/can_key.dart';
 import 'package:intl/intl.dart';
 import 'qr_scanner_screen.dart';
 import 'mrz_scanner_screen.dart';
-import 'face_compare_screen.dart'; 
+import 'face_compare_screen.dart';
+import 'screens/authorization_denied_screen.dart';
+import 'settings_screen.dart';
+import 'door_open_screen.dart';
 import 'services/ConfigService.dart';
+import 'services/image_converter_service.dart';
+import 'services/LocalDatabaseService.dart';
+import 'services/MqttClientService.dart';
+import 'services/OfflineSyncService.dart';
+import 'app_navigator.dart';
 
 class MrtdData {
   EfCardAccess? cardAccess;
@@ -48,7 +56,9 @@ String formatProgressMsg(String message, int percentProgress) {
   return message + "\n\n" + full + empty;
 }
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   Logger.root.level = Level.ALL;
   Logger.root.logSensitiveData = true;
   Logger.root.onRecord.listen((record) {
@@ -63,6 +73,7 @@ class MrtdEgApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlatformApp(
+      navigatorKey: appNavigatorKey,
       localizationsDelegates: [
         DefaultMaterialLocalizations.delegate,
         DefaultCupertinoLocalizations.delegate,
@@ -80,7 +91,7 @@ class MrtdHomePage extends StatefulWidget {
   _MrtdHomePageState createState() => _MrtdHomePageState();
 }
 
-class _MrtdHomePageState extends State<MrtdHomePage> {
+class _MrtdHomePageState extends State<MrtdHomePage> with WidgetsBindingObserver {
   var _alertMessage = "";
   final _log = Logger("mrtdeg.app");
   var _isNfcAvailable = false;
@@ -106,8 +117,23 @@ class _MrtdHomePageState extends State<MrtdHomePage> {
     ]);
     _initPlatformState();
     _timerStateUpdater = Timer.periodic(Duration(seconds: 3), (Timer t) {
+      if (mounted) {
       _initPlatformState();
+      }
     });
+    _startMqttService();
+    // Flush offline queue khi app khởi động và có mạng
+    OfflineSyncService.syncPending();
+    // Lắng nghe app lifecycle để sync khi mạng trở lại
+    WidgetsBinding.instance.addObserver(this);
+    // Sync danh sách nhân viên được phép vào cửa từ server (HTTP fallback)
+    _syncPermissionsFromServer();
+  }
+
+  Future<void> _syncPermissionsFromServer() async {    final deviceCode = await ConfigService.getDeviceCode();
+    if (deviceCode != 'CHƯA_CẤU_HÌNH') {
+      await LocalDatabaseService.fetchPermissionsFromServer(deviceCode);
+    }
   }
 
   Future<void> _initPlatformState() async {
@@ -125,8 +151,8 @@ class _MrtdHomePageState extends State<MrtdHomePage> {
       _isNfcAvailable = isNfcAvailable;
     });
   }
-
-  void _navigateToFaceCompare() {
+ // 1. Cập nhật hàm điều hướng so sánh mặt
+  void _navigateToFaceCompare() async {
     if (_mrtdData?.dg2 == null || _mrtdData?.dg1 == null) {
       setState(() {
         _alertMessage = "Dữ liệu chưa đủ! Vui lòng đọc thẻ CCCD trước (cần DG1 và DG2).";
@@ -134,20 +160,93 @@ class _MrtdHomePageState extends State<MrtdHomePage> {
       return;
     }
     
-    final String cccdNumber = _mrtdData!.dg1!.mrz.documentNumber;
-    
+    final String chipCccd = _mrtdData!.dg1!.mrz.documentNumber.replaceAll('<', '').trim();
+    print('DEBUG chip CCCD="$chipCccd" (${chipCccd.length} chars)');
+
+    // Refresh danh sách quyền từ server trước khi kiểm tra
+    // (tránh tình trạng MQTT SYNC_DATA bị miss hoặc DB bị xóa khi app khởi động)
+    await _syncPermissionsFromServer();
+
+    // Tìm CCCD đầy đủ 12 số trong DB cục bộ (suffix match cho chip 9 số).
+    final String? fullCccd = await LocalDatabaseService.findMatchingCccd(chipCccd);
+
+    // Kiểm tra quyền: CCCD không có trong DB phân quyền cục bộ → TỪ CHỐI ngay,
+    // không cho tiến tới màn hình quét mặt.
+    // Bỏ qua khi _isRemoteUnlockMode=true (admin đã xác nhận mở cửa từ xa).
+    if (fullCccd == null && !_isRemoteUnlockMode) {
+      print('DEBUG auth denied: chipCccd="$chipCccd" không có trong DB phân quyền');
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AuthorizationDeniedScreen(
+              cccdNumber: chipCccd,
+              reason: 'Bạn không có quyền vào cửa này.\nVui lòng liên hệ quản trị viên để được cấp quyền.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final String cccdToUse = fullCccd ?? chipCccd;
+    print('DEBUG cccdToUse="$cccdToUse" (local=${fullCccd != null})');
+
     final String fullName = "${_mrtdData!.dg1!.mrz.lastName} ${_mrtdData!.dg1!.mrz.firstName}";
+    Uint8List? chipImageBytes = _mrtdData!.dg2!.imageData;
+    
+    if (chipImageBytes == null || chipImageBytes.isEmpty) {
+      if (mounted) setState(() => _alertMessage = "Lỗi: Không tìm thấy ảnh trong chip!");
+      return;
+    }
 
-    print("Chuyển sang màn hình so sánh với: $cccdNumber - $fullName");
+    final convertedBytes = await ImageConverterService.decodeChipImage(chipImageBytes);
+    if (convertedBytes == null) {
+      if (mounted) setState(() => _alertMessage = "Lỗi: Không thể giải mã ảnh từ chip!");
+      return;
+    }
 
-    Navigator.push(
+    if (!mounted) return;
+    
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => FaceCompareScreen(
-          chipImageBytes: _mrtdData!.dg2!.toBytes(), // Ảnh từ chip
-          cccd: cccdNumber,                          // Số CCCD
-          fullname: fullName,                        // Họ tên
+          chipImageBytes: convertedBytes,
+          cccd: cccdToUse,   // Dùng CCCD đầy đủ 12 số từ DB, hoặc chipCccd nếu không có
+          fullname: fullName,
+          remoteUnlock: _isRemoteUnlockMode, // true khi admin trigger qua MQTT
         ),
+      ),
+    );
+
+    // Reset CCCD data sau khi trở về từ FaceCompareScreen/DoorOpenScreen
+    if (mounted) {
+      setState(() {
+        _mrtdData = null;
+        _alertMessage = '';
+      });
+      _isRemoteUnlockMode = false; // reset sau khi flow hoàn thành
+      _doe.clear();
+    }
+  }
+
+  // 2. Cập nhật hàm xử lý tín hiệu MQTT thành công
+  bool _isOpenDoorSignal = false;
+  bool _isRemoteUnlockMode = false; // true khi admin bấm "Mở cửa từ xa" → skip permission check
+
+  void _handleOpenDoorSignalLocal(String msg) {
+    if (!mounted) return;
+    // Reset data
+    setState(() {
+      _mrtdData = null;
+      _can.clear();
+      _alertMessage = '';
+      _isOpenDoorSignal = false;
+    });
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DoorOpenScreen(label: msg),
       ),
     );
   }
@@ -196,8 +295,57 @@ class _MrtdHomePageState extends State<MrtdHomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cleanupNfc();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Mỗi khi app lên foreground: thử sync offline queue
+      OfflineSyncService.syncPending().then((result) {
+        if ((result['sent'] ?? 0) > 0 && mounted) {
+          setState(() => _alertMessage = '✓ Đã đồng bộ ${result['sent']} bản ghi offline lên server');
+          Future.delayed(const Duration(seconds: 4), () {
+            if (mounted) setState(() => _alertMessage = '');
+          });
+        }
+      });
+    }
+  }
+
+  void _startMqttService() async {
+    try {
+      await MqttClientService.initialize((Map<String, dynamic> data) {
+        final action = data['action']?.toString() ?? '';
+        if (action == 'START_AUTH_FLOW') {
+          // Admin yêu cầu xác minh → mở QR scanner ngay (giống bấm nút trên màn hình)
+          print('[MQTT] START_AUTH_FLOW → navigate to QR scanner (REMOTE_UNLOCK mode)');
+          if (mounted) {
+            _isRemoteUnlockMode = true; // đánh dấu remote unlock để skip permission check
+            // Quay về màn chính trước (nếu đang ở màn khác)
+            appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+            // Đợi 1 frame cho popUntil xong rồi push QR scanner
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _navigateToQrScanner();
+            });
+          }
+        } else if (action == 'OPEN_DOOR') {
+          // OPEN_DOOR từ approve PENDING_APPROVAL — chỉ xử lý nếu đang ở màn chính
+          // (face_compare_screen.dart tự xử lý khi đang chờ duyệt)
+          final msg = data['message']?.toString() ?? 'Cửa đang mở';
+          print('[MQTT] OPEN_DOOR received on main screen: $msg');
+          if (mounted) {
+            appNavigatorKey.currentState?.push(
+              MaterialPageRoute(builder: (_) => DoorOpenScreen(label: msg)),
+            );
+          }
+        }
+      });
+    } catch (e) {
+      print('MQTT init error: $e');
+    }
   }
 
   Future<void> _cleanupNfc() async {
@@ -582,36 +730,6 @@ class _MrtdHomePageState extends State<MrtdHomePage> {
     return list;
   }
 
-void _showSettingsDialog(BuildContext context) {
-  TextEditingController _idController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text("Cấu Hình Thiết Bị"),
-        content: TextField(
-          controller: _idController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(hintText: "Nhập ID Công Ty (VD: 1, 2)"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await ConfigService.saveOrgId(_idController.text);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Đã lưu cấu hình cho Công Ty ${_idController.text}"))
-              );
-            },
-            child: Text("Lưu"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
@@ -620,7 +738,10 @@ void _showSettingsDialog(BuildContext context) {
           PlatformIconButton(
             icon: Icon(Icons.settings, color: Colors.white),
             onPressed: () {
-              _showSettingsDialog(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
         ],
@@ -655,13 +776,16 @@ void _showSettingsDialog(BuildContext context) {
                       ),
                       if (_alertMessage.isNotEmpty) ...[
                         SizedBox(height: 16),
-                        Text(
-                          _alertMessage,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 15.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            _alertMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 15.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
                           ),
                         ),
                       ],

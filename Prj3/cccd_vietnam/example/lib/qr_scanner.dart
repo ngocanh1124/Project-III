@@ -153,7 +153,10 @@ class _QrScannerState extends State<QrScanner> {
                     children: [
                       CameraPreview(_cameraController!),
                       Positioned.fill(
-                        child: CustomPaint(painter: QrScannerOverlay()),
+                        child: CustomPaint(
+                          painter: QrScannerOverlay(),
+                          isComplex: true,
+                        ),
                       ),
                       Positioned(
                         top: 20,
@@ -207,15 +210,9 @@ class _QrScannerState extends State<QrScanner> {
   }
 }
 
-// Overlay vẽ khung quét QR
 class QrScannerOverlay extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint borderPaint = Paint()
-      ..color = Colors.green
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-
     final double scannerSize = size.width * 0.7;
     final Rect rect = Rect.fromCenter(
       center: Offset(size.width / 2, size.height / 2),
@@ -223,13 +220,37 @@ class QrScannerOverlay extends CustomPainter {
       height: scannerSize,
     );
 
-    final Paint overlayPaint = Paint()
-      ..color = Colors.black54
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
+    // saveLayer so BlendMode.clear punches a transparent hole through the overlay
+    canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..color = Colors.black54
+        ..style = PaintingStyle.fill,
+    );
     canvas.drawRect(rect, Paint()..blendMode = BlendMode.clear);
-    canvas.drawRect(rect, borderPaint);
+    canvas.restore();
+
+    // Corner brackets for alignment guides
+    final Paint cornerPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    const double cornerLen = 24.0;
+
+    // Top-left
+    canvas.drawLine(rect.topLeft, rect.topLeft.translate(cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.topLeft, rect.topLeft.translate(0, cornerLen), cornerPaint);
+    // Top-right
+    canvas.drawLine(rect.topRight, rect.topRight.translate(-cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.topRight, rect.topRight.translate(0, cornerLen), cornerPaint);
+    // Bottom-left
+    canvas.drawLine(rect.bottomLeft, rect.bottomLeft.translate(cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.bottomLeft, rect.bottomLeft.translate(0, -cornerLen), cornerPaint);
+    // Bottom-right
+    canvas.drawLine(rect.bottomRight, rect.bottomRight.translate(-cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.bottomRight, rect.bottomRight.translate(0, -cornerLen), cornerPaint);
   }
 
   @override

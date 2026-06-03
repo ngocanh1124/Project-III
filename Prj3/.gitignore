@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets - KHÔNG commit lên git ###
+.env.properties
+.env

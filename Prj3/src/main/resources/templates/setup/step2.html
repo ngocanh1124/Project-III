@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard - Bước 2: Tạo tài khoản Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+        }
+        
+        .progress {
+            display: flex;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+        
+        .progress-item {
+            flex: 1;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-item.completed {
+            background: #4caf50;
+        }
+        
+        .progress-item.active {
+            background: #667eea;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .step-subtitle {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .error {
+            color: #f44336;
+            font-size: 13px;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .alert {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-next {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-next:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-back {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-back:hover {
+            background: #d0d0d0;
+        }
+        
+        .info-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #666;
+            border-left: 4px solid #667eea;
+        }
+        
+        .password-requirements {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress">
+            <div class="progress-item completed"></div>
+            <div class="progress-item active"></div>
+            <div class="progress-item"></div>
+        </div>
+        
+        <h1>Bước 2: Tạo tài khoản Admin</h1>
+        <p class="step-subtitle">Tạo tài khoản quản trị viên cho công ty</p>
+        
+        <div th:if="${error}" class="alert" th:text="${error}"></div>
+        
+        <div class="info-box">
+            <strong>Thông tin:</strong> Tài khoản này sẽ được dùng để đăng nhập vào hệ thống quản lý.
+        </div>
+        
+        <form method="POST" th:action="@{/setup/step2}">
+            <div class="form-group">
+                <label for="adminEmail">Email <span style="color: red;">*</span></label>
+                <input type="email" id="adminEmail" name="adminEmail" 
+                       required placeholder="admin@company.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="adminUsername">Username <span style="color: red;">*</span></label>
+                <input type="text" id="adminUsername" name="adminUsername" 
+                       required placeholder="admin" 
+                       pattern="[a-zA-Z0-9_]{3,}" title="Tối thiểu 3 ký tự, chỉ dùng chữ cái, số và dấu gạch dưới">
+                <span class="password-requirements">Tối thiểu 3 ký tự, chỉ dùng chữ cái, số và dấu gạch dưới</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="adminPassword">Mật khẩu <span style="color: red;">*</span></label>
+                <input type="password" id="adminPassword" name="adminPassword" 
+                       required placeholder="Nhập mật khẩu mạnh"
+                       minlength="6">
+                <span class="password-requirements">Tối thiểu 6 ký tự</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Xác nhận mật khẩu <span style="color: red;">*</span></label>
+                <input type="password" id="confirmPassword" name="confirmPassword" 
+                       required placeholder="Nhập lại mật khẩu"
+                       minlength="6">
+            </div>
+            
+            <div class="btn-container">
+                <button type="button" class="btn-back" onclick="history.back()">← Quay lại</button>
+                <button type="submit" class="btn-next">Tiếp tục →</button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // Validate password match on input
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const pass = document.getElementById('adminPassword').value;
+            const confirm = this.value;
+            
+            if (confirm && pass !== confirm) {
+                this.style.borderColor = '#f44336';
+            } else if (confirm) {
+                this.style.borderColor = '#4caf50';
+            } else {
+                this.style.borderColor = '#e0e0e0';
+            }
+        });
+    </script>
+</body>
+</html>

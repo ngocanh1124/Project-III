@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard - Bước 1: Thông tin công ty</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+        }
+        
+        .progress {
+            display: flex;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+        
+        .progress-item {
+            flex: 1;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-item.active {
+            background: #667eea;
+        }
+        
+        .progress-item.completed {
+            background: #4caf50;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .step-subtitle {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .error {
+            color: #f44336;
+            font-size: 13px;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .alert {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-next {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-next:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #666;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress">
+            <div class="progress-item active"></div>
+            <div class="progress-item"></div>
+            <div class="progress-item"></div>
+        </div>
+        
+        <h1>Bước 1: Thông tin công ty</h1>
+        <p class="step-subtitle">Nhập thông tin cơ bản của công ty</p>
+        
+        <div th:if="${error}" class="alert" th:text="${error}"></div>
+        
+        <div class="info-box">
+            <strong>Lưu ý:</strong> Mã công ty chỉ có thể được đặt một lần duy nhất. Hãy chắc chắn chọn mã công ty phù hợp.
+        </div>
+        
+        <form method="POST" th:action="@{/setup/step1}">
+            <div class="form-group">
+                <label for="companyName">Tên công ty <span style="color: red;">*</span></label>
+                <input type="text" id="companyName" name="companyName" 
+                       th:value="${companyName}" required placeholder="Ví dụ: Công ty ABC">
+            </div>
+            
+            <div class="form-group">
+                <label for="companyId">Mã công ty <span style="color: red;">*</span></label>
+                <input type="text" id="companyId" name="companyId" 
+                       th:value="${companyId}" required placeholder="Ví dụ: ABC123"
+                       pattern="[A-Z0-9]+" title="Chỉ cho phép chữ cái hoa và số">
+                <span class="error" style="font-size: 12px; color: #999;">Chỉ dùng chữ hoa và số (ví dụ: ABC123)</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="address">Địa chỉ <span style="color: red;">*</span></label>
+                <input type="text" id="address" name="address" 
+                       th:value="${address}" required placeholder="Ví dụ: 123 Đường ABC, TP HCM">
+            </div>
+            
+            <div class="btn-container">
+                <button type="submit" class="btn-next">Tiếp tục →</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

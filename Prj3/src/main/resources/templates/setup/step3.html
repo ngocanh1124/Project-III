@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard - Bước 3: Hoàn tất</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .progress {
+            display: flex;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+        
+        .progress-item {
+            flex: 1;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-item.completed {
+            background: #4caf50;
+        }
+        
+        .progress-item.active {
+            background: #667eea;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #4caf50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            font-size: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .step-subtitle {
+            color: #999;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .info-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-section h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .info-item {
+            font-size: 13px;
+            color: #666;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 600;
+            color: #333;
+            min-width: 100px;
+            display: inline-block;
+        }
+        
+        .value {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #856404;
+        }
+        
+        .warning-box strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-finish {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-finish:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress">
+            <div class="progress-item completed"></div>
+            <div class="progress-item completed"></div>
+            <div class="progress-item active"></div>
+        </div>
+        
+        <div class="success-icon">✓</div>
+        
+        <h1>Setup hoàn tất!</h1>
+        <p class="step-subtitle">Công ty của bạn đã sẵn sàng sử dụng hệ thống</p>
+        
+        <div class="info-section">
+            <h3>Thông tin công ty</h3>
+            <div class="info-item">
+                <span class="label">Mã công ty:</span>
+                <span class="value" th:text="${companyId}"></span>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>Bước tiếp theo</h3>
+            <div class="info-item" style="padding: 8px 0; border: none;">
+                1️⃣ Đăng nhập vào hệ thống quản lý
+            </div>
+            <div class="info-item" style="padding: 8px 0; border: none;">
+                2️⃣ Cấu hình mã công ty trên ứng dụng Android (<strong th:text="${companyId}"></strong>)
+            </div>
+            <div class="info-item" style="padding: 8px 0; border: none;">
+                3️⃣ Sử dụng ứng dụng để ghi nhận điểm danh
+            </div>
+        </div>
+        
+        <div class="warning-box">
+            <strong>⚠️ Lưu ý quan trọng</strong>
+            Mã công ty <span class="value" th:text="${companyId}"></span> 
+            chỉ có thể được sử dụng một lần duy nhất cho cả web và app. 
+            Hãy nhớ lại mã này khi cấu hình trên thiết bị di động.
+        </div>
+        
+        <form method="POST" th:action="@{/setup/step3}">
+            <div class="btn-container">
+                <button type="submit" class="btn-finish">Hoàn tất & Đăng nhập →</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

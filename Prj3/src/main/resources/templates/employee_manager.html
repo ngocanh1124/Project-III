@@ -1,76 +1,175 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Quản Lý Nhân Sự</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Nhân Sự - Hệ Thống Điểm Danh</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .navbar h2 { font-size: 20px; font-weight: 600; }
+        .container-wrapper { padding: 30px; }
+        .card-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px; border-radius: 8px 8px 0 0; font-weight: 600;
+        }
+        .form-section {
+            background: white; border-radius: 12px; padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 25px;
+        }
+        .employee-card {
+            background: white; border-radius: 10px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .employee-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        .chip-image-preview { width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 2px solid #ddd; }
+        .image-drop-zone {
+            border: 2px dashed #667eea; border-radius: 8px; padding: 20px;
+            text-align: center; cursor: pointer; background: #f8f9ff; transition: 0.3s;
+        }
+        .image-drop-zone:hover { background: #f0f2ff; border-color: #764ba2; }
+        .btn-add-employee {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            color: white; border: none; font-weight: 600; padding: 12px 30px; border-radius: 6px;
+        }
+        .btn-emergency-unlock {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white; border: none; font-weight: 700; padding: 15px 30px; border-radius: 6px;
+        }
+    </style>
 </head>
-<body class="bg-light p-4">
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>👥 Quản Lý Nhân Sự</h2>
-        <div>
-            <span class="fw-bold me-3 text-secondary" th:if="${user != null}">🏢 <span th:text="${user.org.name}"></span></span>
-            <a href="/" class="btn btn-outline-primary">⬅ Về Trang Điểm Danh</a>
+<body>
+    <div class="navbar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>👥 Quản Lý Nhân Sự</h2>
+                <small th:if="${admin != null}">🏢 <span th:text="${organization.name}"></span></small>
+            </div>
+            <div>
+                <a href="/attendance-dashboard" class="btn btn-light">⬅ Quay Lại Dashboard</a>
+            </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">➕ Thêm Nhân Viên Mới</h5>
-                </div>
-                <div class="card-body">
-                    <form action="/employees/add" method="post">
-                        <div class="mb-3">
-                            <label>Họ và Tên</label>
-                            <input type="text" name="name" class="form-control" required th:value="${preloadName}">
+
+    <div class="container-wrapper">
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="form-section">
+                    <h4 class="card-header-custom mb-4">➕ Thêm Nhân Viên Mới</h4>
+                    <form id="addEmployeeForm" method="post" enctype="multipart/form-data">
+                        <div class="mb-3"><label class="form-label fw-bold">📝 Họ và Tên</label>
+                            <input type="text" id="fullName" name="fullName" class="form-control" required placeholder="Họ tên">
                         </div>
-                        <div class="mb-3">
-                            <label>Số CCCD</label>
-                            <input type="text" name="cccd" class="form-control" required th:value="${preloadCccd}">
+                        <div class="mb-3"><label class="form-label fw-bold">🆔 Số CCCD</label>
+                            <input type="text" id="cccd" name="cccd" class="form-control" required placeholder="Số CCCD">
                         </div>
-                        <div class="mb-3">
-                            <label>Chức Vụ</label>
-                            <input type="text" name="position" class="form-control" placeholder="Vd: Kế toán">
+                        <div class="mb-3"><label class="form-label fw-bold">💼 Chức Vụ</label>
+                            <input type="text" id="position" name="position" class="form-control" placeholder="Vd: Kế toán">
                         </div>
-                        <button type="submit" class="btn btn-success w-100">Lưu Nhân Viên</button>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">📸 Ảnh Chip CCCD</label>
+                            <div class="image-drop-zone" id="dropZone" onclick="document.getElementById('chipImage').click();">
+                                <p>📷 Kéo thả ảnh hoặc click để chọn</p>
+                                <input type="file" id="chipImage" name="chipImage" class="d-none" accept="image/*">
+                            </div>
+                            <div id="imagePreviewContainer" class="mt-3" style="display: none;">
+                                <img id="imagePreview" class="chip-image-preview">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-add-employee w-100">✅ Lưu Nhân Viên</button>
                     </form>
                 </div>
+
+                <div class="form-section">
+                    <h5 class="mb-3">🚨 Mở Cửa Khẩn Cấp</h5>
+                    <button type="button" onclick="emergencyUnlock()" class="btn btn-emergency-unlock w-100">🔓 MỞ CỬA KHẨN CẤP</button>
+                </div>
             </div>
-        </div>
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Họ Tên</th>
-                                <th>CCCD</th>
-                                <th>Chức Vụ</th>
-                                <th>Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="emp : ${employees}">
-                                <td th:text="${emp.id}"></td>
-                                <td th:text="${emp.name}" class="fw-bold"></td>
-                                <td th:text="${emp.cccd}"></td>
-                                <td th:text="${emp.position}"></td>
-                                <td>
-                                    <a th:href="@{/employees/delete/{id}(id=${emp.id})}" 
-                                       class="btn btn-danger btn-sm"
-                                       onclick="return confirm('Bạn chắc chắn muốn xóa nhân viên này?')">
-                                        🗑 Xóa
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <div class="col-lg-7">
+                <div class="form-section">
+                    <h4 class="card-header-custom mb-4">📋 Danh Sách Nhân Viên</h4>
+                    <div id="employeeList">
+                        <div class="empty-state"><p>⏳ Đang tải dữ liệu...</p></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <script th:inline="javascript">
+        // Chú ý: Dùng đúng biến organization từ Model của bạn
+        const organizationId = [[${organization.id}]];
+
+        // Preview ảnh
+        document.getElementById('chipImage').onchange = e => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById('imagePreview').src = reader.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        // Load danh sách nhân viên qua API
+        function loadEmployees() {
+            fetch(`/api/admin/employees/list/${organizationId}`)
+                .then(r => r.json())
+                .then(data => {
+                    const list = document.getElementById('employeeList');
+                    if (data.data.length === 0) {
+                        list.innerHTML = '<p class="text-center">Chưa có nhân viên nào.</p>';
+                        return;
+                    }
+                    list.innerHTML = data.data.map(emp => `
+                        <div class="employee-card d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="/api/admin/employees/chip-image/${emp.id}" class="chip-image-preview me-3" onerror="this.src='https://via.placeholder.com/100?text=No+Image'">
+                                <div>
+                                    <h6 class="mb-0">${emp.name}</h6>
+                                    <small class="text-muted">ID: ${emp.cccd}</small><br>
+                                    <small class="badge bg-secondary">${emp.position || 'Nhân viên'}</small>
+                                </div>
+                            </div>
+                            <button onclick="deleteEmployee(${emp.id})" class="btn btn-sm btn-outline-danger">🗑 Xóa</button>
+                        </div>
+                    `).join('');
+                });
+        }
+
+        // Xử lý Form Add
+        document.getElementById('addEmployeeForm').onsubmit = e => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('fullName', document.getElementById('fullName').value);
+            formData.append('cccd', document.getElementById('cccd').value);
+            formData.append('position', document.getElementById('position').value);
+            formData.append('organizationId', organizationId);
+            formData.append('chipImage', document.getElementById('chipImage').files[0]);
+
+            fetch('/api/admin/employees/add', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => { alert(d.message); loadEmployees(); });
+        };
+
+        function deleteEmployee(id) {
+            if(confirm("Xóa nhân viên này?")) {
+                fetch(`/api/admin/employees/${id}`, { method: 'DELETE' }).then(() => loadEmployees());
+            }
+        }
+
+        loadEmployees();
+    </script>
 </body>
 </html>

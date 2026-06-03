@@ -1,77 +1,139 @@
 package prj3.example.Prj3.controller;
 
-import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.multipart.MultipartFile;
-
-import jakarta.servlet.http.HttpSession;
-import prj3.example.Prj3.model.AppUser;
-import prj3.example.Prj3.model.AttendanceLog;
-import prj3.example.Prj3.repository.AttendanceLogRepository;
+import org.springframework.web.bind.annotation.*;
+import prj3.example.Prj3.entity.AttendanceLog;
 import prj3.example.Prj3.service.AttendanceService;
+import prj3.example.Prj3.service.FaceComparisonService;
+import prj3.example.Prj3.repository.AttendanceLogRepository;
+import lombok.extern.slf4j.Slf4j;
 
-@Controller 
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/attendance")
 public class AttendanceController {
-    @Autowired
+
+    @Autowired 
     private AttendanceService attendanceService;
+
+    @Autowired 
+    private FaceComparisonService faceComparisonService;
+
+    @Autowired 
+    private AttendanceLogRepository logRepository;
+
     
-    @Autowired
-    private AttendanceLogRepository logRepo;
-
-    @PostMapping("/api/attendance/check")
-    @ResponseBody
-    public ResponseEntity<?> checkAttendance(
-            @RequestParam(value = "cccd", required = false) String cccd,
-            @RequestParam(value = "fullname", required = false) String fullname,
-            @RequestParam(value = "organizationId", defaultValue = "1") Long organizationId,
-            @RequestParam("chip") MultipartFile chip,
-            @RequestParam("selfie") MultipartFile selfie) {
+    @PostMapping("/record")
+    public ResponseEntity<?> recordAttendance(@RequestBody AttendanceLog log) {
         
-        AttendanceLog log = attendanceService.processAttendance(cccd, fullname, chip, selfie, organizationId);
+        AttendanceLog savedLog = attendanceService.processAttendanceAndReply(log);
+        
+        return ResponseEntity.ok(Map.of(
+            "success", true, 
+            "message", "Đã ghi nhận lịch sử",
+            "id", savedLog.getId()
+        ));
+    }
 
-        if (log != null) {
-            return ResponseEntity.ok()
-                    .body("{\"match\": " + log.isMatched() + ", \"score\": " + log.getScore() + "}");
-        } else {
-            return ResponseEntity.status(500).body("{\"error\": \"Lỗi hệ thống\"}");
+    
+    @GetMapping("/history")
+    public ResponseEntity<List<AttendanceLog>> getHistory() {
+        
+        return ResponseEntity.ok(logRepository.findAllByOrderByScanTimeDesc());
+    }
+
+    
+    @PostMapping("/remote-open/{deviceCode}")
+    public ResponseEntity<?> remoteOpen(@PathVariable String deviceCode) {
+        attendanceService.remoteOpenDoor(deviceCode);
+        return ResponseEntity.ok(Map.of("message", "Đã gửi lệnh mở cửa tới " + deviceCode));
+    }
+
+    
+
+    
+
+    @PostMapping("/face/compare")
+    public ResponseEntity<?> compareFaces(@RequestBody Map<String, String> request) {
+        try {
+            String face1Base64 = request.get("face1_base64");
+            String face2Base64 = request.get("face2_base64");
+            
+            if (face1Base64 == null || face2Base64 == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "face1_base64 and face2_base64 are required"
+                ));
+            }
+            
+            log.info("Face comparison requested");
+            FaceComparisonService.FaceComparisonResult result = 
+                faceComparisonService.compareFaces(face1Base64, face2Base64);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", result.success,
+                "similarity", result.similarity,
+                "matched", result.matched,
+                "confidence", result.confidence,
+                "message", result.success ? "Comparison completed" : result.message
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error comparing faces", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "error", "Face comparison failed: " + e.getMessage()
+            ));
         }
     }
 
-    @GetMapping("/")
-    public String index(Model model, HttpSession session) {
-        AppUser user = (AppUser) session.getAttribute("loggedInUser");
-        if (user == null) return "redirect:/login";
+    
 
-        List<AttendanceLog> allLogs = logRepo.findByOrgId(user.getOrg().getId());
-        
-        List<AttendanceLog> passedLogs = allLogs.stream()
-                .filter(AttendanceLog::isMatched) 
-                .sorted(Comparator.comparing(AttendanceLog::getTimestamp).reversed())
-                .collect(Collectors.toList());
-
-        Map<String, List<AttendanceLog>> groupedLogs = new LinkedHashMap<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-        for (AttendanceLog log : passedLogs) {
-            String dateKey = log.getTimestamp().format(formatter);
-            groupedLogs.computeIfAbsent(dateKey, k -> new java.util.ArrayList<>()).add(log);
+    @PostMapping("/face/extract")
+    public ResponseEntity<?> extractFaceVector(@RequestBody Map<String, String> request) {
+        try {
+            String imageBase64 = request.get("image_base64");
+            String cccd = request.get("cccd");
+            
+            if (imageBase64 == null || cccd == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "image_base64 and cccd are required"
+                ));
+            }
+            
+            log.info("Face vector extraction requested for {}", cccd);
+            FaceComparisonService.FaceVectorResult result = 
+                faceComparisonService.extractFaceVector(imageBase64, cccd);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", result.success,
+                "vector_base64", result.success ? result.vectorBase64 : null,
+                "quality", result.quality,
+                "message", result.success ? "Vector extracted successfully" : result.message
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error extracting face vector", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "error", "Vector extraction failed: " + e.getMessage()
+            ));
         }
+    }
 
-        model.addAttribute("groupedLogs", groupedLogs);
-        model.addAttribute("user", user);
-        return "index";
+    
+
+    @GetMapping("/face/health")
+    public ResponseEntity<?> checkFaceServiceHealth() {
+        boolean healthy = faceComparisonService.checkHealth();
+        return ResponseEntity.ok(Map.of(
+            "face_service_healthy", healthy,
+            "message", healthy ? "Face AI service is ready" : "Face AI service is down"
+        ));
     }
 }

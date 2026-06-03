@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
+    <title>Dashboard Quản trị - Hệ thống CCCD</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; line-height: 1.6; }
+        
+        /* Navigation Bar */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px 30px; display: flex;
+            justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .navbar h1 { font-size: 20px; font-weight: 600; }
+        .navbar-menu { display: flex; gap: 20px; align-items: center; }
+        .navbar-menu span { font-size: 14px; opacity: 0.9; }
+        .navbar-menu a, .navbar-menu button {
+            color: white; text-decoration: none; font-size: 14px;
+            cursor: pointer; background: rgba(255, 255, 255, 0.1); border: none;
+            padding: 8px 15px; border-radius: 5px; transition: all 0.3s;
+        }
+        .navbar-menu a:hover, .navbar-menu button:hover { background: rgba(255, 255, 255, 0.2); }
+        
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        
+        /* Header Stats */
+        .header {
+            background: white; padding: 25px; border-radius: 12px;
+            margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .header h2 { color: #2d3748; margin-bottom: 20px; font-size: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; }
+        .header-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        
+        .info-card {
+            background: #f8fafc; padding: 15px; border-radius: 10px;
+            border-left: 4px solid #667eea; transition: transform 0.2s;
+        }
+        .info-card:hover { transform: translateY(-2px); }
+        .info-card label { font-size: 11px; color: #718096; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .info-card .value { font-size: 18px; font-weight: 700; color: #1a202c; }
+        
+        /* Content Area */
+        .content {
+            background: white; padding: 30px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .content-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 25px;
+            border-bottom: 2px solid #f7fafc; padding-bottom: 20px;
+        }
+        .refresh-status { font-size: 12px; color: #a0aec0; font-style: italic; }
+
+        .btn-excel {
+            background: #38a169; color: white !important; text-decoration: none;
+            padding: 10px 20px; border-radius: 6px; font-size: 13px;
+            font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-excel:hover { background: #2f855a; box-shadow: 0 4px 12px rgba(56, 161, 105, 0.2); }
+
+        /* Grouping by Date */
+        .date-section { margin-bottom: 40px; }
+        .date-badge {
+            background: #ebf4ff; color: #2b6cb0; padding: 10px 18px;
+            border-radius: 8px; font-weight: 700; font-size: 14px;
+            display: inline-block; margin-bottom: 15px; border: 1px solid #bee3f8;
+        }
+
+        .no-data { text-align: center; padding: 80px 20px; color: #a0aec0; border: 2px dashed #edf2f7; border-radius: 12px; }
+
+        /* Table Style */
+        table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 8px; }
+        table thead { background: #f7fafc; }
+        table th { padding: 16px; text-align: left; font-weight: 600; color: #4a5568; font-size: 13px; border-bottom: 2px solid #edf2f7; }
+        table td { padding: 16px; border-bottom: 1px solid #edf2f7; font-size: 14px; color: #2d3748; }
+        table tr:last-child td { border-bottom: none; }
+        table tr:hover { background-color: #f9fafb; }
+        
+        /* Status Badges */
+        .badge-success { 
+            display: inline-block; padding: 5px 12px; border-radius: 15px; 
+            font-size: 11px; font-weight: 700; background: #c6f6d5; color: #22543d; 
+            text-transform: uppercase;
+        }
+        .score-text { font-weight: 700; color: #667eea; }
+
+        /* CSS Mới cho ảnh Live */
+        .img-live { width: 50px; height: 50px; border-radius: 5px; object-fit: cover; border: 1px solid #ddd; cursor: zoom-in; transition: 0.3s; }
+        .img-live:hover { transform: scale(1.1); }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+        let stompClient = null;
+        function connect() {
+            const socket = new SockJS('/ws/attendance');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                stompClient.subscribe('/topic/attendance-logs', function() { location.reload(); });
+            }, function() { setTimeout(connect, 5000); });
+        }
+        window.onload = connect;
+    </script>
+</head>
+<body>
+    <div class="navbar">
+        <h1>📊 Hệ Thống Điểm Danh CCCD</h1>
+        <div class="navbar-menu">
+            <span th:text="'👤 ' + ${admin.fullName}">Quản trị viên</span>
+            <form method="GET" action="/logout" style="display: inline;">
+                <button type="submit">🚪 Đăng xuất</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h2>🏢 Thông tin đơn vị</h2>
+            <div class="header-info">
+                <div class="info-card">
+                    <label>Tên đơn vị</label>
+                    <div class="value" th:text="${organization.name}">Cong Ty Test</div>
+                </div>
+                <div class="info-card">
+                    <label>Mã định danh</label>
+                    <div class="value" th:text="${organization.companyId}">123456789</div>
+                </div>
+                <div class="info-card">
+                    <label>Tổng lượt thành công</label>
+                    <div class="value" th:text="${logCount}">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="content-header">
+                <div>
+                    <h3>📜 Lịch sử điểm danh hôm nay</h3>
+                    <p class="refresh-status">● Cập nhật tự động qua WebSocket</p>
+                </div>
+                <a th:if="${logCount > 0}" href="/admin/export-attendance" class="btn-excel">📥 Xuất Báo Cáo Excel</a>
+            </div>
+            
+            <div th:if="${groupedLogs == null || groupedLogs.isEmpty()}" class="no-data">
+                <p>🔍 Hiện chưa có bản ghi điểm danh nào phù hợp.</p>
+            </div>
+            
+            <div th:if="${groupedLogs != null && !groupedLogs.isEmpty()}">
+                <div th:each="entry : ${groupedLogs}" class="date-section">
+                    <div class="date-badge">
+                        🗓️ Ngày: <span th:text="${entry.key}"></span>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div></div>
+                        <a th:href="@{'/admin/export-attendance'(date=${entry.key})}" class="btn-excel" style="background:#3182ce; font-size: 11px; padding: 5px 10px;">📥 Xuất ngày này</a>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Số CCCD</th>
+                                <th>Họ tên trên thẻ</th>
+                                <th>Ảnh Live</th>
+                                <th>Kết quả</th>
+                                <th>Độ tương đồng</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="log : ${entry.value}">
+                                <td th:text="${log.timestamp != null ? #strings.substring(log.timestamp, 11, 19) : '00:00:00'}"></td>
+                                <td th:text="${log.cccd}">-</td>
+                                <td th:text="${log.capturedName}">-</td>
+                                
+                                <td>
+                                    <img th:if="${log.imageLive != null}" 
+                                         th:src="'data:image/jpeg;base64,' + ${T(java.util.Base64).getEncoder().encodeToString(log.imageLive)}" 
+                                         class="img-live" onclick="window.open(this.src)">
+                                    <span th:unless="${log.imageLive != null}" style="color:#ccc;">N/A</span>
+                                </td>
+
+                                <td>
+                                    <span th:if="${log.status == 1}" class="badge-success">✓ Duyệt</span>
+                                    <span th:if="${log.status != 1}" style="display:inline-block; padding:6px 10px; border-radius:8px; background:#f6ad55; color:#7a341e; font-weight:700; font-size: 12px;">Chưa duyệt</span>
+                                </td>
+                                <td>
+                                    <span class="score-text" 
+                                          th:text="${log.score != null ? #numbers.formatDecimal(log.score * 100, 1, 1) + '%' : '0%'}">
+                                    </span>
+                                </td>
+                                <td>
+                                    <form th:action="@{'/admin/attendance/' + ${log.id} + '/approve'}" method="post" th:if="${log.status != 1}">
+                                        <button type="submit" style="padding:6px 10px; border-radius:6px; background:#38a169; color:white; border:none; font-weight:700; cursor:pointer; font-size: 12px;">Duyệt</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log("Dashboard Updated: " + new Date().toLocaleTimeString());
+    </script>
+</body>
+</html>

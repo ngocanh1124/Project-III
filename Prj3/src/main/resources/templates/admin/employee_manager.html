@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Nhân Sự - Hệ Thống Điểm Danh</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* GIỮ NGUYÊN TOÀN BỘ PHẦN CSS CỦA BẠN */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .navbar h2 { font-size: 20px; font-weight: 600; }
+        .container-wrapper { padding: 30px; }
+        .card-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+        }
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+        }
+        .employee-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .employee-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .chip-image-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+        }
+        .image-drop-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #f8f9ff;
+        }
+        .image-drop-zone:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+        .btn-add-employee {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .btn-emergency-unlock {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+            border: none;
+            font-weight: 700;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .btn-small { padding: 6px 12px; font-size: 12px; margin: 0 3px; }
+        .employee-info { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; }
+        .employee-details { display: flex; flex-direction: column; gap: 10px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .info-label { font-weight: 600; color: #4a5568; }
+        .empty-state { text-align: center; padding: 40px; color: #a0aec0; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>👥 Quản Lý Nhân Sự</h2>
+                <small th:if="${admin != null}">🏢 <span th:text="${organization.name}"></span></small>
+            </div>
+            <div>
+                <a href="/attendance-dashboard" class="btn btn-light">⬅ Quay Lại Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-wrapper">
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="form-section">
+                    <h4 class="card-header-custom mb-4">➕ Thêm Nhân Viên Mới</h4>
+                    <form id="addEmployeeForm" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">📝 Họ và Tên</label>
+                            <input type="text" id="fullName" name="fullName" class="form-control" required placeholder="Nhập họ và tên">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">🆔 Số CCCD</label>
+                            <input type="text" id="cccd" name="cccd" class="form-control" required placeholder="Nhập số CCCD">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">💼 Chức Vụ</label>
+                            <input type="text" id="position" name="position" class="form-control" placeholder="VD: Kế toán">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">📸 Ảnh Chip CCCD</label>
+                            <div class="chip-image-upload">
+                                <div class="image-drop-zone" id="dropZone">
+                                    <div style="font-size: 24px; margin-bottom: 10px;">📷</div>
+                                    <p class="mb-2"><strong>Kéo thả ảnh vào đây</strong></p>
+                                    <a href="#" class="link-primary" onclick="document.getElementById('chipImage').click(); return false;">Chọn từ máy tính</a>
+                                </div>
+                                <input type="file" id="chipImage" name="chipImage" class="d-none" accept="image/*">
+                                <div id="imagePreviewContainer" class="mt-3" style="display: none;">
+                                    <img id="imagePreview" class="chip-image-preview">
+                                    <button type="button" class="btn btn-sm btn-warning mt-2 ms-2" onclick="clearImage()">🗑 Xóa ảnh</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-add-employee w-100">✅ Thêm Nhân Viên</button>
+                    </form>
+                </div>
+
+                <div class="form-section">
+                    <h5 class="mb-3">🚨 Mở Cửa Khẩn Cấp</h5>
+                    <form id="emergencyUnlockForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Lý do mở cửa</label>
+                            <textarea class="form-control" id="unlockReason" placeholder="Nhập lý do" rows="3"></textarea>
+                        </div>
+                        <button type="button" onclick="emergencyUnlock()" class="btn btn-emergency-unlock w-100">🔓 MỞ CỬA KHẨN CẤP</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="form-section">
+                    <h4 class="card-header-custom mb-4">📋 Danh Sách Nhân Viên</h4>
+                    <div id="employeeList">
+                        <div class="empty-state"><p>⏳ Đang tải dữ liệu...</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade modal-custom" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">✏️ Chỉnh Sửa Nhân Viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <div class="mb-3">
+                            <label class="form-label">Họ và Tên</label>
+                            <input type="text" id="editFullName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Chức Vụ</label>
+                            <input type="text" id="editPosition" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">📸 Cập Nhật Ảnh Chip</label>
+                            <input type="file" id="editChipImage" class="form-control" accept="image/*">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">💾 Lưu Thay Đổi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:inline="javascript">
+        // SỬA TẠI ĐÂY: Lấy ID từ Object organization truyền từ Controller
+        const organizationId = [[${organization.id}]];
+        let currentEditId = null;
+
+        // Xử lý Preview ảnh (Giữ nguyên)
+        const dropZone = document.getElementById('dropZone');
+        const chipImageInput = document.getElementById('chipImage');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) { chipImageInput.files = files; previewImage(files[0]); }
+        });
+        chipImageInput.addEventListener('change', (e) => { if (e.target.files && e.target.files[0]) previewImage(e.target.files[0]); });
+        function previewImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        function clearImage() { chipImageInput.value = ''; document.getElementById('imagePreviewContainer').style.display = 'none'; }
+
+        // Load danh sách (Giữ nguyên logic API của bạn)
+        function loadEmployees() {
+            fetch(`/api/admin/employees/list/${organizationId}`)
+                .then(r => r.json())
+                .then(data => { if (data.success) renderEmployees(data.data); })
+                .catch(e => console.error('Error:', e));
+        }
+
+        function renderEmployees(employees) {
+            const list = document.getElementById('employeeList');
+            if (!employees || employees.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>📭 Chưa có nhân viên nào</p></div>';
+                return;
+            }
+            list.innerHTML = employees.map(emp => `
+                <div class="employee-card">
+                    <div class="employee-info">
+                        <div>
+                            ${emp.chipImage ? `<img src="/api/admin/employees/chip-image/${emp.id}" class="chip-image-preview">` : `<div class="chip-image-preview d-flex align-items-center justify-content-center" style="background: #eee;">📷</div>`}
+                        </div>
+                        <div class="employee-details">
+                            <div class="info-row"><span class="info-label">Tên:</span><span>${emp.name}</span></div>
+                            <div class="info-row"><span class="info-label">CCCD:</span><span>${emp.cccd}</span></div>
+                            <div class="info-row"><span class="info-label">Chức Vụ:</span><span>${emp.position || '-'}</span></div>
+                            <div class="mt-3">
+                                <button class="btn btn-info btn-small" onclick="editEmployee(${emp.id}, '${emp.name}', '${emp.position || ''}')">✏️ Sửa</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteEmployee(${emp.id})">🗑 Xóa</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add Employee
+        document.getElementById('addEmployeeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('fullName', document.getElementById('fullName').value);
+            formData.append('cccd', document.getElementById('cccd').value);
+            formData.append('position', document.getElementById('position').value);
+            formData.append('organizationId', organizationId);
+            if (chipImageInput.files[0]) formData.append('chipImage', chipImageInput.files[0]);
+
+            fetch('/api/admin/employees/add', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Thành công');
+                    document.getElementById('addEmployeeForm').reset();
+                    clearImage();
+                    loadEmployees();
+                } else alert('❌ ' + data.message);
+            });
+        });
+
+        // Edit/Delete/Unlock (Giữ nguyên các hàm fetch hiện tại của bạn)
+        function editEmployee(id, name, position) {
+            currentEditId = id;
+            document.getElementById('editFullName').value = name;
+            document.getElementById('editPosition').value = position;
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
+
+        function saveEdit() {
+            const formData = new FormData();
+            formData.append('fullName', document.getElementById('editFullName').value);
+            formData.append('position', document.getElementById('editPosition').value);
+            const editImg = document.getElementById('editChipImage').files[0];
+            if (editImg) formData.append('chipImage', editImg);
+
+            fetch(`/api/admin/employees/update/${currentEditId}`, { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    loadEmployees();
+                }
+            });
+        }
+
+        function deleteEmployee(id) {
+            if (confirm('Xóa nhân viên này?')) {
+                fetch(`/api/admin/employees/${id}`, { method: 'DELETE' })
+                .then(r => r.json()).then(() => loadEmployees());
+            }
+        }
+
+        function emergencyUnlock() {
+            const reason = document.getElementById('unlockReason').value;
+            if (!reason) return alert('Nhập lý do');
+            fetch('/api/admin/employees/emergency-unlock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `reason=${encodeURIComponent(reason)}&organizationId=${organizationId}`
+            }).then(r => r.json()).then(data => alert(data.success ? '✅ ĐÃ MỞ' : '❌ Lỗi'));
+        }
+
+        loadEmployees();
+    </script>
+</body>
+</html>
