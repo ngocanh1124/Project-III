@@ -41,8 +41,8 @@ dist-info/
 *.class
 *.jar
 *.war
-# Ignore Java libraries
-**/lib/
+# Ignore Java libraries (only in Maven project root)
+Prj3/lib/
 **/oracleJdk-25/
 *.ear
 
