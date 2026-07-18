@@ -1,0 +1,212 @@
+﻿\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương 1 đã thảo luận chi tiết về tính cấp thiết của đề tài, đặt vấn đề nghiên cứu, xác định mục tiêu tổng quát cùng các mục tiêu cụ thể và vạch ra định hướng giải pháp kỹ thuật tổng quan cho hệ thống kiểm soát ra vào. Tiếp nối mạch luận lý đó, Chương 2 này sẽ trình bày chi tiết quá trình phân tích hệ thống hướng đối tượng cho giải pháp điểm danh thông minh tích hợp xác thực hai lớp dựa trên Căn cước công dân gắn chip và nhận diện sinh trắc học. 
+
+Nội dung chương tập trung sâu vào việc khảo sát thực trạng quản lý an ninh, phân tích các yêu cầu thực tế để định biên rõ ràng phạm vi tính năng cần phát triển. Đồng thời, chương thực hiện mô hình hóa các yêu cầu chức năng mức cao thông qua hệ thống biểu đồ Use Case tổng quát áp dụng cơ chế phân cấp quyền lũy tiến, tiến hành phân rã chuyên sâu luồng điểm danh cốt lõi, tường minh hóa quy trình nghiệp vụ phối hợp liên nền tảng bằng biểu đồ hoạt động và biểu đồ tuần tự. Cuối cùng, ma trận đặc tả chi tiết các tình huống xử lý biên cùng các chỉ số kiểm soát phi chức năng khắt khe sẽ được vạch ra làm cơ sở lý thuyết vững chắc cho giai đoạn thiết kế kiến trúc và cài đặt mã nguồn nội bộ ở giai đoạn tiếp theo.
+
+Nội dung chính trong chương được tổ chức thông qua bốn phần lớn bao gồm: (i) Khảo sát hiện trạng và định biên tác nhân tại mục 2.1; (ii) Tổng quan chức năng hệ thống với các biểu đồ Use Case tổng quát, phân rã chức năng và quy trình nghiệp vụ tổng thể tại mục 2.2; (iii) Đặc tả chi tiết các Use Case hạt nhân trung tâm tại mục 2.3; và (iv) Các yêu cầu phi chức năng về hiệu năng, an toàn bảo mật tại mục 2.4.
+
+\section{Khảo sát hiện trạng và Xác định tác nhân}
+\label{section:2.1}
+
+Thông thường, khảo sát chi tiết về hiện trạng và yêu cầu của phần mềm sẽ được lấy từ ba nguồn chính, đó là: người dùng/khách hàng, các hệ thống đã có, và các ứng dụng kiểm soát tương tự. Qua khảo sát thực tế tình hình quản lý nhân sự và kiểm soát an ninh tại các cơ quan, doanh nghiệp, quy trình điểm danh truyền thống bằng vân tay hoặc thẻ từ thông thường đang bộc lộ nhiều hạn chế lớn như: khả năng chấm công hộ, thẻ từ RFID tần số thấp dễ bị sao chép hoặc đánh tráo, và dữ liệu sinh trắc học lưu kho tập trung có nguy cơ bị tấn công rò rỉ an ninh cao.
+
+Để giải quyết triệt để vấn đề này, giải pháp công nghệ ứng dụng thẻ Căn cước công dân gắn chip kết hợp nhận diện khuôn mặt hai lớp tự trị được đề xuất. Dữ liệu ảnh sinh trắc học gốc DG2 được bóc tách trực tiếp từ chip bảo mật của thẻ tại thời điểm quét để làm khuôn mẫu đối sánh thời gian thực với ảnh chụp selfie, loại bỏ việc phải lưu trữ dữ liệu khuôn mặt tập trung trên máy chủ Backend. Hệ thống sau khi phân tích và xác thực sẽ điều khiển các thiết bị chấp hành IoT ngoại vi mở chốt khóa cửa tự động thông qua giao thức mạng truyền tải dữ liệu trực tuyến.
+
+Từ kết quả khảo sát thực tế trên, hệ thống định biên rõ cấu trúc các tác nhân tham gia vận hành được tổng hợp chi tiết trong Bảng \ref{table:actors}.
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.3cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
+\hline
+\textbf{Tác nhân (Actor)} & \textbf{Vai trò nghiệp vụ} & \textbf{Chức năng / Đặc quyền chính trong hệ thống} \\
+\hline
+\textbf{Nhân viên / Cư dân} & Người dùng cuối & Quét thẻ CCCD gắn chip tại thiết bị trạm Android, chụp ảnh selfie thực hiện điểm danh vào/ra và theo dõi lịch sử cá nhân. \\
+\hline
+\textbf{Bảo vệ / Vận hành\newline(\texttt{OPERATOR})} & Giám sát thực địa & Theo dõi màn hình Web Dashboard thời gian thực qua kết nối WebSocket hoạt động tại cổng mạng 3002, kích hoạt mở chốt cửa từ xa qua lệnh MQTT khi có sự cố và giám sát log điểm danh. \\
+\hline
+\textbf{Quản lý HR\newline(\texttt{HR\_MANAGER})} & Quản lý nhân sự & Quản lý hồ sơ nhân viên (CRUD) trên giao diện Web cổng 3002, nhập liệu hàng loạt từ tệp tin Excel, thiết lập cấu hình cấp/thu hồi quyền truy cập và kết xuất báo cáo dữ liệu. \\
+\hline
+\textbf{Admin hệ thống\newline(\texttt{ADMIN})} & Quản trị kỹ thuật & Cấu hình định danh thiết bị trạm ESP32, quản lý danh mục người dùng web cấp dưới (HR, Operator) và thiết lập quy tắc truy cập nội bộ doanh nghiệp. \\
+\hline
+\textbf{Super Admin} & Toàn quyền tối cao & Vận hành ở cấp độ nền tảng (Platform), cấu hình quản lý đa tổ chức/doanh nghiệp, cấp phát tài khoản ADMIN và kiểm toán hệ thống qua audit log. \\
+\hline
+\textbf{Thiết bị Android} & Client IoT & Đọc bóc tách dữ liệu chip CCCD, thực thi đối soát Lớp 1, gửi gói tin payload xác thực lên server qua REST API và nhận lệnh điều khiển mở cửa. \\
+\hline
+\end{tabular}
+\caption{Danh mục phân định vai trò và chức năng của các tác nhân hệ thống}
+\label{table:actors}
+\end{table}
+
+\section{Tổng quan chức năng}
+\label{section:2.2}
+
+Phần này tiến hành mô hình hóa tổng quan chức năng hệ thống bằng ngôn ngữ mô hình hóa thống nhất UML.
+
+\subsection{Biểu đồ Use Case tổng quát}
+\label{subsection:2.2.1}
+
+Biểu đồ Use Case tổng quan được thiết kế nhằm mô tả trực quan các tương tác mức cao giữa năm nhóm tác nhân con người, thực thể phần cứng ngoại vi và hệ thống điểm danh thông minh đa doanh nghiệp. Để tối ưu hóa cấu trúc sơ đồ và thể hiện rõ nét tính chất phân quyền cấp bậc, biểu đồ áp dụng mối quan hệ kế thừa tác nhân.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\linewidth]{Hinhve/UseCaseTongQuan.png}
+    \caption{Biểu đồ Use Case tổng quát phân quyền hệ thống}
+    \label{fig:usecase_tongquan}
+\end{figure}
+
+Trong cấu trúc kiểm soát tại Hình \ref{fig:usecase_tongquan}, vai trò và quan hệ kế thừa lũy tiến giữa các tác nhân được thiết lập chặt chẽ nhằm triệt tiêu sự dư thừa trong mô tả kiến trúc và tối ưu hóa bộ lọc an ninh tại tầng lõi Backend:
+\begin{itemize}
+    \item \textbf{Mối quan hệ kế thừa cấp doanh nghiệp:} Tác nhân \texttt{ADMIN} đóng vai trò thực thể con kế thừa trực tiếp tác nhân cha là \texttt{HR\_MANAGER}. Quy tắc này đồng nghĩa với việc \texttt{ADMIN} tự động sở hữu toàn bộ các quyền của phân hệ cấp dưới và mở rộng thêm đặc quyền cấu hình thiết bị trạm và cấp phát tài khoản nội bộ công ty.
+    \item \textbf{Mối quan hệ kế thừa cấp nền tảng:} Tác nhân \texttt{SUPER\_ADMIN} đại diện cho thực thể tối cao, kế thừa toàn bộ hạ tầng chức năng của tác nhân \texttt{ADMIN}. Ranh giới bảo mật được thiết lập nghiêm ngặt: các tài khoản \texttt{ADMIN} chỉ hoạt động cô lập trong phạm vi một tổ chức. Ngược lại, \texttt{SUPER\_ADMIN} sở hữu các đặc quyền tối hậu cấp nền tảng, trực tiếp cấu hình danh mục đa tổ chức và tra cứu nhật ký kiểm toán \texttt{audit\_logs}.
+\end{itemize}
+
+\subsection{Biểu đồ Use Case phân rã Luồng điểm danh}
+\label{subsection:2.2.2}
+
+Trong hệ thống, các cấu phần quản trị hành chính mức Web vận hành theo các kịch bản tương tác tuyến tính thông thường nên không cần tiến hành phân rã phức tạp. Đồ án tập trung tiến hành phân rã chuyên sâu vào Use Case hạt nhân trung tâm Thực hiện điểm danh vào/ra để làm rõ kiến trúc phân tán. Sơ đồ phân rã tại Hình \ref{fig:usecase_phanra_atd} tổ chức theo mô hình phân tầng tháp đứng để biểu diễn mối quan hệ phụ thuộc ràng buộc bắt buộc \texttt{<<include>>} giữa các tác vụ thành phần.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\linewidth]{Hinhve/UseCasePhanRaAttendance.png}
+    \caption{Biểu đồ Use Case phân rã phân hệ ghi nhận điểm danh}
+    \label{fig:usecase_phanra_atd}
+\end{figure}
+
+Luồng phân rã vạch rõ mối quan hệ khăng khít giữa hai phân tầng hành vi:
+\begin{itemize}
+    \item \textbf{Tầng thu thập phần cứng tại trạm:} Bắt buộc bao gồm hành động quét, bóc tách dữ liệu chip bảo mật NFC CCCD thông qua giao thức BAC/PACE và tự động cấu hình camera trước thu chụp ảnh chân dung selfie trực tiếp của nhân sự tại chỗ.
+    \item \textbf{Tầng xác thực và điều khiển ngầm:} Bao gồm tiến trình thực thi đối soát sinh trắc học Lớp 1 (nhúng mô hình FaceNet local tại ứng dụng di động Android Client) nhằm lọc nhiễu ban đầu, gửi gói tin payload mã hóa qua cổng mạng REST API, thực hiện xác thực đối sánh chéo Lớp 2 (mô hình ArcFace tập trung tại máy chủ AI Server) và cuối cùng là điều phối MQTT để giải phóng chốt cửa vật lý. Đối với các kịch bản lỗi nghịch đảo chuỗi trạng thái di chuyển (như quẹt chiều RA liên tiếp hoặc thiếu dữ liệu VÀO ca sáng), nếu xác chuẩn danh tính chính chủ qua phân hệ AI, hệ thống tự động thực thi luồng an ninh mềm (Soft Mode), kích hoạt mở cửa tránh ùn tắc thực địa, đồng thời gọi payload phản hồi điều khiển màn hình trạm Android phát chỉ báo banner đồ họa nhắc nhở trực quan tại hiện trường.
+\end{itemize}
+
+\subsection{Quy trình nghiệp vụ tổng thể}
+\label{subsection:2.2.3}
+
+Quy trình nghiệp vụ điểm danh hai lớp kết hợp đóng mở cửa tự động là luồng hoạt động liên kết phức tạp bao gồm nhiều tác nhân phối hợp không đồng bộ từ Ứng dụng di động, Máy chủ Backend đến thiết bị IoT ESP32. Luồng tiến trình nghiệp vụ tổng thể được mô tả trực quan qua biểu đồ hoạt động.
+
+Khi nhân viên đặt thẻ CCCD vào vùng cảm biến, ứng dụng di động bóc tách dữ liệu ảnh gốc trong chip đồng thời kích hoạt camera chụp ảnh selfie để đối soát Lớp 1 tại chỗ. Sau khi vượt qua Lớp 1, gói payload được truyền lên máy chủ Backend để kích hoạt đối soát Lớp 2 thông qua dịch vụ AI, kết hợp kiểm tra ma trận phân quyền thời gian ra vào. Chỉ khi toàn bộ các bước đều hợp lệ, hệ thống mới ghi nhận log thành công và phát thông điệp lệnh mở chốt cửa xuống thiết bị vi điều khiển vật lý qua giao thức mạng MQTT.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\linewidth]{Hinhve/QuyTrinhNghiepVuTotal.png}
+    \caption{Biểu đồ hoạt động mô tả quy trình nghiệp vụ điểm danh và điều khiển cửa}
+    \label{fig:quy_trinh_nghiep_vu}
+\end{figure}
+
+Để làm rõ hơn các giao thức kết nối mạng thực tế được cài đặt trong mã nguồn (\texttt{REST API HTTP}, \texttt{WebSocket STOMP} đẩy realtime dữ liệu lên giao diện Web, và \texttt{MQTT Client} truyền xuống phần cứng vật lý), biểu đồ tuần tự tại Hình \ref{fig:sequence_total} thiết lập chi tiết các mốc thời gian giao tiếp tuần tự giữa các phân vùng kiến trúc.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\linewidth]{Hinhve/SequenceDiagramLogs.png}
+    \caption{Biểu đồ tuần tự tiến trình giao tiếp hệ thống và điều khiển thiết bị thời gian thực}
+    \label{fig:sequence_total}
+\end{figure}
+
+Tiến trình giao tiếp trong Biểu đồ tuần tự được diễn giải tuần tự qua các bước nghiệp vụ sau:
+\begin{enumerate}
+    \item Nhân viên thực hiện quẹt thẻ CCCD và chụp ảnh selfie tại trạm. Ứng dụng Android bóc tách dữ liệu và chạy thuật toán so khớp Lớp 1 (MobileFaceNet Local) nhằm đảm bảo người đang quét thẻ chính là chủ thẻ.
+    \item Ngay khi Lớp 1 hợp lệ, Android Client đóng gói thông tin ảnh chip và ảnh selfie vào định dạng chuỗi mã hóa, truyền tải lên Spring Boot Backend thông qua một HTTP POST Request kết nối tới Endpoint \texttt{/api/v1/attendance}.
+    \item Máy chủ Backend tiếp nhận gói tin, lập tức khởi tạo một bản ghi nhật ký điểm danh trong cơ sở dữ liệu MySQL với trạng thái logic tạm thời là \texttt{PENDING}.
+    \item Backend truyền tiếp gói tin hình ảnh sang Python Flask AI Server thông qua kết nối mạng nội bộ REST API để thực thi kiểm tra Lớp 2. Flask AI Server trích xuất vector đặc trưng, tính toán khoảng cách toán học và trả về điểm số tương đồng cho Backend.
+    \item Backend đối chiếu điểm số nhận được với cấu hình ngưỡng an ninh, đồng thời truy vấn cơ sở dữ liệu để đối soát ma trận phân quyền \path{access_permissions} dựa trên mốc giờ kết thúc ca làm việc cá nhân (\texttt{end\_time}) nhằm tự động quét dọn và giải phóng trạng thái phiên cũ ngầm kéo dài.
+    \item Nếu dữ liệu trắc lượng đạt chuẩn chính chủ nhưng vi phạm chuỗi tuần tự di chuyển (Vào/Ra liên tiếp), Backend tự động chuyển dịch luồng xử lý sang Soft Mode: Cập nhật trạng thái log thành \texttt{SUCCESS} để mở cửa. Đồng thời, bộ điều phối đẩy dữ liệu thời gian thực qua giao thức WebSocket STOMP tới Endpoint \texttt{/topic/attendance} để màn hình React Web Dashboard của OPERATOR (vận hành tại cổng 3002) tự động cập nhật dòng trạng thái mới hiển thị dưới dạng Badge cảnh báo màu cam trực quan (\texttt{MISSING\_IN\_AUTO\_OPEN} hoặc \texttt{ANTI\_PASSBACK\_IN}) tại tab "Cảnh báo" mà không cần tải lại trang.
+    \item Song song với luồng đẩy Web, Backend thực hiện Publish một thông điệp lệnh dạng JSON (\texttt{OPEN\_DOOR}) xuống Topic \texttt{cccd/devices/command} qua cổng mạng MQTT Broker nhằm giải phóng chốt khóa cơ học.
+    \item Mạch vi điều khiển ESP32 bắt được thông điệp MQTT, thực hiện kích hoạt chân tín hiệu GPIO điều khiển rơ-le điện tử để giải phóng chốt cửa vật lý trong khoảng định thời 3 giây, sau đó tự động ngắt chốt để khóa cửa lại.
+    \item Backend gửi phản hồi HTTP Response 200 OK kèm theo payload định biên cảnh báo chuỗi về Android Client, ứng dụng hiển thị thông báo điểm danh và banner đồ họa nhắc nhở quy trình trực quan trên màn hình.
+\end{enumerate}
+
+\section{Đặc tả chức năng}
+\label{section:2.3}
+
+Dưới đây là các Use Case cốt lõi quan trọng nhất ảnh hưởng trực tiếp đến chu kỳ vận hành của đồ án tốt nghiệp được lựa chọn tiến hành lập ma trận đặc tả chi tiết luồng sự kiện.
+
+\subsection{Đặc tả use case: Ghi nhận điểm danh hai lớp}
+\label{subsection:2.3.1}
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\caption{Bảng ma trận đặc tả Use Case ghi nhận điểm danh}
+\label{tab:spec_attendance}
+% Sử dụng bộ đo \linewidth và cột X của tabularx để bảng tự động co khít tuyệt đối với lề giấy
+\begin{tabularx}{\linewidth}{|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Thuộc tính thông tin} & \textbf{Nội dung đặc tả chi tiết cấu trúc} \\ \hline
+\textbf{Tên Use Case} & Ghi nhận điểm danh hai lớp \\ \hline
+\textbf{Tác nhân} & Nhân viên, Thiết bị trạm Android, Máy chủ Backend, Dịch vụ AI \\ \hline
+\textbf{Tiền điều kiện} & Trạm đầu cuối trực tuyến, tài khoản nhân viên ở trạng thái \texttt{ACTIVE}. \\ \hline
+\textbf{Hậu điều kiện} & Nhật ký lưu vào DB, lệnh mở khóa truyền tải thành công xuống phần cứng. \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Nhân viên chạm thẻ CCCD vào vùng cảm biến NFC của trạm. \newline
+2. Ứng dụng bóc tách thông tin văn bản và tệp ảnh chân dung gốc DG2. \newline
+3. Camera tự động kích hoạt thu chụp ảnh selfie thực tế tại chỗ. \newline
+4. Hệ thống thực thi đối soát sinh trắc học lớp 1 theo ngưỡng an toàn 0.65. \newline
+5. Đóng gói payload gửi HTTP POST lên API máy chủ Backend trung tâm. \newline
+6. Backend gọi dịch vụ AI so khớp chéo ArcFace lớp 2 giữa selfie và ảnh chip. \newline
+7. Server đối soát ma trận phân quyền truy cập thời gian \path{access_permissions}. \newline
+8. Trả kết quả thành công, phát lệnh điều khiển qua MQTT mở chốt rơ-le vật lý. \\ \hline
+\textbf{Luồng sự kiện phát sinh} & 
+4a. Điểm so khớp Layer 1 dưới 0.65 $\rightarrow$ Báo lỗi trên màn hình trạm, chặn luồng request gửi lên máy chủ trung tâm. \newline
+5a. Mất mạng Internet cục bộ $\rightarrow$ App Android kích hoạt bộ lưu hàng đợi SQLite ngoại tuyến, tự động đồng bộ khi có kết nối trở lại. \newline
+7a. Nhân sự quét sai vị trí hoặc ngoài giờ phân quyền $\rightarrow$ Trả lỗi hệ thống, ghi nhận log trạng thái \texttt{FAILED}, giữ chốt cửa vật lý khóa cứng. \newline
+7b. Quét RA nhưng thiếu dữ liệu quẹt VÀO $\rightarrow$ Nếu chính chủ (\texttt{Face Match = True}), kích hoạt Soft Mode: Đổi trạng thái \texttt{SUCCESS} mở cửa, sinh mã log cảnh báo \texttt{MISSING\_IN\_AUTO\_OPEN} đẩy lên Web cổng 3002, màn hình trạm hiện banner nhắc nhở. \newline
+7c. Quét VÀO liên tiếp khi chưa có log quét RA $\rightarrow$ Nếu chính chủ (\texttt{Face Match = True}), kích hoạt Soft Mode: Đổi trạng thái \texttt{SUCCESS} mở cửa, sinh mã log cảnh báo \texttt{ANTI\_PASSBACK\_IN} đẩy lên Web cổng 3002, màn hình trạm hiện banner nhắc nhở. \newline
+7d. Mọi trường hợp sai chuỗi có sinh trắc học không khớp (\texttt{Face Match = False}) $\rightarrow$ Cưỡng chế kịch bản nghiêm ngặt Hard Mode: Khóa cứng chốt cửa, trả lỗi hệ thống trạng thái \texttt{FAILED} và đánh nhãn nguy hiểm \texttt{ANTI\_PASSBACK\_FAILED}. \newline
+8a. Mạch ESP32 mất nguồn hoặc không phản hồi MQTT $\rightarrow$ Backend tự động ghi nhận nhật ký lỗi Timeout thời gian thực đẩy lên tab "Thất bại" của màn hình Web Dashboard. \\ \hline
+\end{tabularx}
+\end{table}
+
+\subsection{Đặc tả use case: Kích hoạt sinh trắc học nhân viên lần đầu}
+\label{subsection:2.3.2}
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\caption{Bảng ma trận đặc tả Use Case kích hoạt nhân viên lần đầu}
+\label{tab:spec_activation}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{10.1cm}|}
+\hline
+\textbf{Thuộc tính thông tin} & \textbf{Nội dung đặc tả chi tiết cấu trúc} \\ \hline
+\textbf{Tên Use Case} & Kích hoạt sinh trắc học nhân viên lần đầu \\ \hline
+\textbf{Tác nhân} & Nhân viên, Quản lý HR, Thiết bị trạm Android, Máy chủ Backend \\ \hline
+\textbf{Tiền điều kiện} & Thông tin nhân viên đã được thêm, trạng thái logic hiển thị \texttt{PENDING\_ACTIVATION}. \\ \hline
+\textbf{Hậu điều kiện} & Thực thể nhân viên chuyển sang trạng thái \texttt{ACTIVE}, trường dữ liệu mảng vector khuôn mặt được cập nhật thành công. \\ \hline
+\textbf{Luồng sự kiện chính} & 
+1. Quản lý lựa chọn tên nhân sự cần kích hoạt trên giao diện quản trị trạm. \newline
+2. Nhân viên chạm thẻ CCCD và chụp ảnh selfie thu thập trực tiếp tại chỗ. \newline
+3. Thiết bị gửi gói request mã hóa POST về API máy chủ Backend. \newline
+4. Server kiểm tra tính toàn vẹn thông tin văn bản bóc tách với hồ sơ gốc. \newline
+5. Dịch vụ AI trích xuất mảng vector nhúng đặc trưng 512 chiều từ hình ảnh. \newline
+6. Lưu chuỗi đặc trưng khuôn mặt (Face Vector) dạng mảng số thực 512 chiều vào cơ sở dữ liệu để phục vụ đối soát chéo. Trường \texttt{image\_raw\_url} chứa ảnh chip DG2 không được lưu trữ vĩnh viễn trên máy chủ; ảnh chỉ tồn tại tạm thời trong bộ nhớ xử lý của phiên làm việc để trích xuất vector rồi được giải phóng ngay, đảm bảo nguyên tắc không lưu kho ảnh tập trung. \newline
+7. Chuyển đổi trạng thái logic phân quyền tài khoản sang giá trị hợp lệ \texttt{ACTIVE}. \\ \hline
+\textbf{Luồng sự kiện phát sinh} & 
+2a. Thẻ CCCD bị lỗi chip bảo mật vật lý hoặc không hỗ trợ giao thức kết nối NFC $\rightarrow$ Ứng dụng báo lỗi phần cứng đọc thẻ, yêu cầu kiểm tra thẻ khác. \newline
+5a. Ảnh chụp trực tiếp không khớp ảnh chip gốc qua mô hình AI $\rightarrow$ Hệ thống từ chối kích hoạt tài khoản, phát thông báo cảnh báo lỗi nhận thân nhân sự. \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Yêu cầu phi chức năng}
+\label{section:2.4}
+
+Bên cạnh các nghiệp vụ chức năng, hệ thống bắt buộc phải thỏa mãn các chỉ số tham số kỹ thuật phi chức năng khắt khe nhằm bảo đảm năng lực vận hành ổn định trên môi trường thực tế:
+
+\subsection{Hiệu năng và Tốc độ phản hồi}
+Tổng chu kỳ thời gian thực hiện một lượt điểm danh hoàn chỉnh, bao gồm toàn bộ các phân đoạn bóc tách dữ liệu chip NFC, chụp ảnh selfie, gọi API đối soát chéo máy chủ và xử lý AI tập trung không được vượt quá ngưỡng giới hạn tổng thể là 15-20 giây trong điều kiện hạ tầng mạng bình thường. Mục tiêu thiết kế thực tế hướng tới đạt trung bình khoảng 3.3 đến 3.8 giây cho một chu kỳ khép kín tích hợp xác thực Soft Mode toàn phần.
+
+\subsection{Khả năng mở rộng và Xử lý đồng thời}
+Hạ tầng lõi Backend được cấu hình tối ưu hóa luồng xử lý với cơ chế Tomcat Thread Pool hỗ trợ lên đến 200 luồng hoạt động song song tại cùng một thời điểm. Đồng thời, hệ thống thiết lập cổng mạng chuyên dụng dành riêng cho các thiết bị trạm đầu cuối kết nối qua giao thức REST và MQTT, tách biệt hoàn toàn với cổng HTTP phục vụ các yêu cầu tương tác giao diện web cổng 3002 của người quản trị, loại bỏ triệt để nguy cơ nghẽn mạng hay tranh chấp tài nguyên mạng khi chạy đồng thời nhiều thiết bị trạm.
+
+\subsection{An toàn an ninh và Bảo mật dữ liệu}
+Toàn bộ các kênh truyền thông điệp dữ liệu trong hệ thống mạng phân tán đều phải đi qua các giao thức mã hóa bảo mật đường truyền nâng cao TLS/SSL (HTTPS, WSS, MQTTS). Mật khẩu tài khoản quản trị được băm an toàn bằng thuật toán BCrypt với độ phức tạp cấu hình salt-round bằng 10 trước khi ghi xuống đĩa cứng cơ sở dữ liệu. Chuỗi token định danh JWT áp dụng thuật toán ký số mã hóa đối xứng mã bảo mật, bắt buộc phải được cấu hình thời hạn phân rã hiệu lực cụ thể trong vòng 24 giờ nhằm phòng chống các nguy cơ tấn công chiếm quyền điều khiển phiên làm việc.
+
+\subsection{Độ tin cậy và Tính toàn vẹn hệ thống}
+Hệ thống phải thiết lập cơ chế dự phòng ngoại tuyến thông minh. Dữ liệu điểm danh thực nghiệm khi xảy ra sự cố mất kết nối mạng cục bộ sẽ được mã hóa và lưu trữ tạm thời trong hàng đợi SQLite nội bộ của thiết bị Android Client, sau đó hệ thống tự động kích hoạt luồng đồng bộ hàng loạt về máy chủ trung tâm ngay khi liên lạc kết nối Internet được khôi phục thành công, bảo chứng tính toàn vẹn dữ liệu chấm công. Song song với đó, tại tầng quản trị phân quyền, cơ chế Auto-create Permission đối xứng tự động tạo lập một cặp quyền truy cập (Vào/Ra) cho cùng một nhân sự tại cùng một vị trí dựa theo trường \texttt{location\_name} của bảng \texttt{devices}, đảm bảo logic State Machine đóng kín chu trình dữ liệu, triệt tiêu lỗ hổng phân quyền trung gian.
+
+Thảo luận tổng kết chương, Chương 2 đã hoàn thành việc phân tích hệ thống hướng đối tượng một cách toàn diện cho giải pháp điểm danh thông minh thông qua việc khảo sát hiện trạng, mô hình hóa các yêu cầu chức năng bằng biểu đồ Use Case tổng quát, phân rã sâu và các biểu đồ hoạt động, tuần tự quy trình nghiệp vụ chi tiết. Các điều kiện biên xử lý và ma trận đặc tả chức năng, yêu cầu phi chức năng kỹ thuật được thiết lập rõ ràng làm cơ sở lý thuyết vững chắc. Từ các kết quả phân tích nhu cầu thực tế này, toàn bộ quá trình thiết kế hệ thống sẽ được trình bày cụ thể trong chương tiếp theo — Chương 3.
+
+\end{document}

@@ -1,0 +1,297 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Cáo Hệ Thống Điểm Danh Thông Minh — Smart Attendance 2026</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #0284c7;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; margin: 0; }
+        
+        /* Navigation/Header */
+        .hero { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 80px 20px; text-align: center; border-bottom: 4px solid var(--primary); }
+        .hero h1 { font-size: 2.5rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        .hero p { opacity: 0.8; font-size: 1.1rem; margin-top: 10px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        
+        /* Layout Grid */
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+
+        .card { background: var(--card); border-radius: 12px; padding: 30px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        
+        h2 { color: var(--primary-dark); border-left: 5px solid var(--primary); padding-left: 15px; margin-bottom: 25px; font-size: 1.8rem; }
+        h3 { color: var(--primary); margin-top: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+        /* Tech Badges */
+        .badge-container { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
+        .badge { padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .badge-orange { background: #ffedd5; color: #9a3412; }
+
+        /* Table Styling */
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        .data-table th { background: #f1f5f9; padding: 12px; text-align: left; border: 1px solid var(--border); color: #475569; }
+        .data-table td { padding: 12px; border: 1px solid var(--border); font-size: 0.95rem; }
+
+        /* Flow Visualization */
+        .flow-container { background: white; padding: 30px; border-radius: 12px; border: 1px solid var(--border); margin: 20px 0; }
+        .flow-item { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px; position: relative; }
+        .flow-item::after { content: ''; position: absolute; left: 15px; top: 40px; bottom: -20px; width: 2px; background: var(--border); }
+        .flow-item:last-child::after { display: none; }
+        .flow-icon { min-width: 32px; height: 32px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 1; }
+        .flow-content h4 { margin: 0; color: var(--primary-dark); }
+
+        /* UI Metrics */
+        .metric-box { display: flex; justify-content: space-around; text-align: center; background: #1e293b; color: white; padding: 30px; border-radius: 12px; margin: 40px 0; }
+        .metric-item h4 { font-size: 2.2rem; margin: 0; color: var(--success); }
+        .metric-item p { margin: 5px 0; opacity: 0.8; font-size: 0.9rem; }
+
+        /* Status Pills */
+        .status { padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .status-in { background: #dbeafe; color: #0284c7; } /* Vào - Xanh */
+        .status-out { background: #fecaca; color: #dc2626; } /* Ra - Đỏ */
+
+        footer { background: #1e293b; color: #94a3b8; padding: 40px 20px; text-align: center; margin-top: 60px; }
+        .code-block { background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 8px; font-family: monospace; overflow-x: auto; color: #334155; }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <h1>Báo Cáo Tổng Quan Hệ Thống</h1>
+    <p>Smart Attendance System — Xác thực thẻ Chip CCCD & Kiểm soát Anti-Passback</p>
+</header>
+
+<div class="container">
+    
+    <!-- 1. KIẾN TRÚC CÔNG NGHỆ -->
+    <section>
+        <h2>1. Kiến Trúc & Công Nghệ Cốt Lõi</h2>
+        <p>Hệ thống được xây dựng trên mô hình phân tán (Distributed Architecture), tối ưu hóa luồng dữ liệu giữa thiết bị biên (Edge) và máy chủ trung tâm (Central Hub).</p>
+        
+        <div class="grid-3">
+            <div class="card">
+                <h3>Backend & API</h3>
+                <div class="badge-container">
+                    <span class="badge badge-blue">Java 21</span>
+                    <span class="badge badge-blue">Spring Boot 3.2</span>
+                    <span class="badge badge-blue">MySQL 8.0</span>
+                </div>
+                <ul>
+                    <li><strong>Quản lý nghiệp vụ:</strong> Điều phối xác thực 2 lớp.</li>
+                    <li><strong>Bảo mật:</strong> JWT Stateless, RBAC 5 cấp độ.</li>
+                    <li><strong>Real-time:</strong> WebSocket STOMP đồng bộ Dashboard.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>AI & Computer Vision</h3>
+                <div class="badge-container">
+                    <span class="badge badge-green">Python 3.10</span>
+                    <span class="badge badge-green">ArcFace</span>
+                    <span class="badge badge-green">Flask</span>
+                </div>
+                <ul>
+                    <li><strong>Mô hình:</strong> InsightFace (ResNet-100) đạt độ chính xác ~99%.</li>
+                    <li><strong>Processing:</strong> Trích xuất vector 512 chiều.</li>
+                    <li><strong>Optimization:</strong> ONNX Runtime cho triển khai CPU/GPU.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Client & IoT</h3>
+                <div class="badge-container">
+                    <span class="badge badge-orange">Flutter 3.19</span>
+                    <span class="badge badge-orange">ESP32</span>
+                    <span class="badge badge-orange">MQTT</span>
+                </div>
+                <ul>
+                    <li><strong>Mobile:</strong> Đọc Chip CCCD qua NFC (BAC/PACE).</li>
+                    <li><strong>Hardware:</strong> Điều khiển rơ-le khóa cửa qua MQTT SSL.</li>
+                    <li><strong>Offline-mode:</strong> SQLite lưu trữ bản ghi tạm khi mất mạng.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. LUỒNG NGHIỆP VỤ & LOGIC KIỂM SOÁT -->
+    <section>
+        <h2>2. Luồng Nghiệp Vụ & Logic Kiểm Soát</h2>
+        <div class="flow-container">
+            <h3>Chu trình điểm danh chuẩn (Positive Flow)</h3>
+            <div class="flow-item">
+                <div class="flow-icon">1</div>
+                <div class="flow-content">
+                    <h4>Quét QR & Nhận diện Chip</h4>
+                    <p>Ứng dụng di động bóc tách số CCCD và mã CAN. Thực hiện "bắt tay" NFC để lấy ảnh chân dung gốc từ phân vùng DG2.</p>
+                </div>
+            </div>
+            <div class="flow-item">
+                <div class="flow-icon">2</div>
+                <div class="flow-content">
+                    <h4>Xác thực 2 lớp (Dual-Auth)</h4>
+                    <p>Lớp 1: MobileFaceNet chạy offline trên điện thoại. Lớp 2: ArcFace chuyên sâu chạy trên AI Server trung tâm.</p>
+                </div>
+            </div>
+            <div class="flow-item">
+                <div class="flow-icon">3</div>
+                <div class="flow-content">
+                    <h4>Kiểm tra Anti-Passback</h4>
+                    <p>Hệ thống truy vấn trạng thái gần nhất. <strong>Ngăn chặn</strong> nếu người dùng quét RA khi chưa có bản ghi VÀO trong ngày.</p>
+                </div>
+            </div>
+            <div class="flow-item">
+                <div class="flow-icon">4</div>
+                <div class="flow-content">
+                    <h4>Kích hoạt chấp hành</h4>
+                    <p>Gửi lệnh MQTT lệnh <code>OPEN_DOOR</code> tới ESP32 và đẩy sự kiện WebSocket lên DashBoard quản trị mầu sắc (Xanh/Đỏ).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. ĐÁNH GIÁ HỆ THỐNG -->
+    <section>
+        <h2>3. Đánh Giá Hệ Thống & Chỉ Số Hiệu Năng</h2>
+        <div class="metric-box">
+            <div class="metric-item">
+                <h4>3.8s</h4>
+                <p>Độ trễ đầu cuối (E2E Latency)</p>
+            </div>
+            <div class="metric-item">
+                <h4>94.5%</h4>
+                <p>Tỷ lệ chấp nhận đúng (TPR)</p>
+            </div>
+            <div class="metric-item">
+                <h4>0.01%</h4>
+                <p>Tỷ lệ nhầm lẫn (FAR)</p>
+            </div>
+            <div class="metric-item">
+                <h4>88%</h4>
+                <p>Giảm tải đối soát thủ công</p>
+            </div>
+        </div>
+
+        <h3>Bảng so sánh phương thức xác thực</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tiêu chí</th>
+                    <th>Thẻ từ / Vân tay cũ</th>
+                    <th>Hệ thống xác thực Chip CCCD</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Bảo mật sinh trắc học</td>
+                    <td>Dễ giả mạo (vân tay giả, thẻ mượn)</td>
+                    <td><strong>Tuyệt đối (Ảnh chip Bộ Công an)</strong></td>
+                </tr>
+                <tr>
+                    <td>Dữ liệu tập trung</td>
+                    <td>Phải lưu kho ảnh nhân viên (Rủi ro rò rỉ)</td>
+                    <td><strong>Không lưu kho ảnh gốc (Privacy-first)</strong></td>
+                </tr>
+                <tr>
+                    <td>Kiểm soát trình tự</td>
+                    <td>Thường không có Anti-passback</td>
+                    <td><strong>Logic Self-healing State Machine</strong></td>
+                </tr>
+                <tr>
+                    <td>Tốc độ triển khai</td>
+                    <td>Phải đăng ký mẫu thủ công</td>
+                    <td><strong>Zero-touch (Quét là chạy)</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 4. TÍNH NĂNG NỔI BẬT: ANTI-PASSBACK & SELF-HEALING -->
+    <section>
+        <h2>4. Anti-Passback & Self-Healing State Machine</h2>
+        <div class="card" style="border-left: 5px solid var(--danger);">
+            <p>Hệ thống triển khai một <strong>Máy trạng thái tự phục hồi</strong> để giải quyết bài toán "quên quét thẻ" hoặc "quét sai quy trình".</p>
+            <div class="grid-3">
+                <div>
+                    <h4>🚫 Anti-Passback</h4>
+                    <p>Phát hiện: <code>Direction = OUT</code> nhưng <code>Last_Log != IN</code>.<br>
+                    Hành động: Từ chối mở cửa, cảnh báo <code>ANTI_PASSBACK</code>.</p>
+                </div>
+                <div>
+                    <h4>🔄 Daily Session Reset</h4>
+                    <p>Tự động đóng các phiên "Quên quét ra" khi hết giờ làm việc dựa trên cấu hình <code>end_time</code> của từng nhân sự.</p>
+                </div>
+                <div>
+                    <h4>📊 Trạng thái chi tiết</h4>
+                    <p>Ghi nhận nhãn: <code>SUCCESS</code>, <code>FAILED</code>, <code>MISSING_OUT</code>, <code>AUTO_CLOSED</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. GIAO DIỆN QUẢN TRỊ & GIÁM SÁT -->
+    <section>
+        <h2>5. Giao Diện Quản Trị & GIám Sát</h2>
+        <p>Dashboard React được thiết kế theo tiêu chuẩn an ninh hiện đại, tập trung vào khả năng phản ứng nhanh.</p>
+        <div class="code-block">
+            // Logic hiển thị Badge màu sắc trên Dashboard
+            const getDirectionBadge = (dir) => (
+                dir === 'IN' 
+                ? <span class="status status-in">➡ Vào (IN)</span> 
+                : <span class="status status-out">⬅ Ra (OUT)</span>
+            );
+        </div>
+        <ul style="margin-top: 20px;">
+            <li><strong>Cập nhật tức thời:</strong> WebSocket STOMP giúp hiển thị bản ghi mới trong &lt; 500ms.</li>
+            <li><strong>Phân quyền Admin-only:</strong> Chỉ Admin mới được phép thay đổi "Chiều di chuyển" của thiết bị (Gate configuration).</li>
+            <li><strong>Báo cáo thông minh:</strong> Xuất dữ liệu Excel tích hợp sẵn cột tính toán giờ công thực tế sau khi đã xử lý Self-healing.</li>
+        </ul>
+    </section>
+
+    <!-- 6. AN NINH HỆ THỐNG -->
+    <section>
+        <h2>6. Hành Lang Bảo Mật (Security Layer)</h2>
+        <div class="grid-3">
+            <div class="card">
+                <span class="security-badge">OWASP #1</span>
+                <h3>Broken Access Control</h3>
+                <p>Sử dụng JWT ký số <strong>HS256</strong>. Mọi request được lọc qua <code>JwtFilter</code>. Phân quyền chặt chẽ tới từng Method API bằng <code>@PreAuthorize</code>.</p>
+            </div>
+            <div class="card">
+                <span class="security-badge">OWASP #3</span>
+                <h3>Injection Prevention</h3>
+                <p>Tuyệt đối không sử dụng SQL thô. Sử dụng <strong>Spring Data JPA</strong> Parameterized Queries để chống SQL Injection 100%.</p>
+            </div>
+            <div class="card">
+                <span class="security-badge">OWASP #7</span>
+                <h3>Identification Issues</h3>
+                <p>Khóa tài khoản khi nhập sai quá nhiều lần. Mã OTP xác thực email có thời hạn 10 phút và chỉ sử dụng một lần (nonce).</p>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <p>© 2026 Developed by Smart Attendance Project Team</p>
+    <p>Hệ thống được thiết kế và triển khai phục vụ đồ án tốt nghiệp — SOICT HUST.</p>
+</footer>
+
+</body>
+</html>

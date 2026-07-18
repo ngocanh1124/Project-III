@@ -1,0 +1,71 @@
+name: test_scan
+description: 'A new Flutter project.'
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  # --- Quản lý cấu hình & Lưu trữ nội bộ ---
+  shared_preferences: ^2.2.0
+  # THÊM: SQLite để lưu danh sách nhân viên/quyền truy cập Offline
+  sqflite: ^2.3.0 
+  path: ^1.8.3
+
+  # --- Kết nối Real-time (Bỏ Polling) ---
+  # THÊM: MQTT để nhận tín hiệu mở cửa từ Server
+  mqtt_client: ^10.0.0
+  # THÊM: Để xử lý các sự kiện giữa các màn hình (ví dụ: nhận lệnh MQTT -> báo UI mở cửa)
+  event_bus: ^2.0.0
+
+  # --- NFC & Bảo mật thẻ CCCD ---
+  flutter_nfc_kit: ^3.6.0
+  pointycastle: ^3.7.3
+  crypto: ^3.0.6
+  hex: ^0.2.0
+  flutter_des: ^3.0.0
+  encrypt: ^5.0.1
+  pkcs7: ^1.0.0
+  
+  # --- Thư viện CCCD nội bộ ---
+  cccd_vietnam:
+    path: ../
+
+  # --- Giao diện & Tiện ích ---
+  flutter_platform_widgets: ^7.0.1
+  expandable: ^5.0.1
+  logging: ^1.1.0
+  intl: ^0.18.0
+
+  # --- AI & Xử lý hình ảnh (Google ML Kit) ---
+  google_mlkit_text_recognition: any
+  google_mlkit_barcode_scanning: any
+  google_mlkit_face_detection: any
+  
+  # --- Camera & Multimedia ---
+  image_picker: ^1.0.0
+  camera: ^0.11.3
+  image: ^4.0.17
+
+  # --- Networking & AI Runtime ---
+  http: ^1.2.2
+  http_parser: ^4.0.2
+  onnxruntime: ^1.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/buffalo_sc/det_500m.onnx
+    - assets/models/buffalo_sc/w600k_mbf.onnx
+    # Đừng quên thêm folder này nếu bạn có lưu icon hoặc ảnh thông báo thành công/thất bại
+    # - assets/images/

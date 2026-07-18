@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  insightface:
+    build: .
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    # If you want to persist a model cache or logs, mount volumes here
+    # volumes:
+    #   - ./model_cache:/root/.insightface

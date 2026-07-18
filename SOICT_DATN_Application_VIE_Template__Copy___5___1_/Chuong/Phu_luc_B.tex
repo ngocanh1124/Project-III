@@ -1,0 +1,107 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Phụ lục này trình bày các bảng đặc tả chi tiết cho các Use Case phụ trợ của hệ thống, bổ sung cho các Use Case hạt nhân đã được đặc tả tại Chương 2. Các Use Case được lựa chọn đại diện cho ba nhóm nghiệp vụ quản trị cốt lõi: quản lý hồ sơ nhân viên, cấu hình thiết bị trạm, và khai thác báo cáo dữ liệu giám sát.
+
+% -------------------------------------------------------
+\section*{A.1 Đặc tả Use Case: Quản lý hồ sơ nhân viên (CRUD)}
+\label{appendix:uc_employee}
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\caption{Bảng đặc tả Use Case quản lý hồ sơ nhân viên}
+\label{tab:uc_employee_crud}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{10.1cm}|}
+\hline
+\textbf{Thuộc tính thông tin} & \textbf{Nội dung đặc tả chi tiết} \\ \hline
+\textbf{Tên Use Case} & Quản lý hồ sơ nhân viên (Thêm / Sửa / Xóa / Xem) \\ \hline
+\textbf{Tác nhân chính} & Quản lý HR (\texttt{HR\_MANAGER}), Admin hệ thống (\texttt{ADMIN}) \\ \hline
+\textbf{Tiền điều kiện} & Tài khoản web đã xác thực JWT hợp lệ, phiên đăng nhập còn trong thời hạn 24 giờ. \\ \hline
+\textbf{Hậu điều kiện} & Bảng \texttt{employees} trong cơ sở dữ liệu được cập nhật đúng trạng thái, giao diện danh sách nhân viên trên Web Dashboard tự động làm mới. \\ \hline
+\textbf{Luồng — Thêm mới} &
+1. HR chọn chức năng \textit{Thêm nhân viên} trên giao diện quản trị. \newline
+2. Điền đầy đủ thông tin hồ sơ: họ tên, số CCCD (12 ký tự), ngày sinh, giới tính, phòng ban, chức vụ và email. \newline
+3. Hệ thống kiểm tra ràng buộc UNIQUE trường \texttt{cccd} trong cơ sở dữ liệu. \newline
+4. Nếu hợp lệ, ghi nhận bản ghi mới với trạng thái mặc định \texttt{PENDING\_ACTIVATION}. \newline
+5. Hệ thống trả về thông báo tạo thành công và yêu cầu kích hoạt sinh trắc học. \\ \hline
+\textbf{Luồng — Nhập hàng loạt} &
+1. HR tải xuống tệp mẫu Excel định dạng chuẩn từ hệ thống. \newline
+2. Điền dữ liệu nhiều nhân viên vào tệp và tải lên qua chức năng \textit{Import Excel}. \newline
+3. Backend phân tích tệp, kiểm tra từng dòng dữ liệu và chèn hàng loạt vào cơ sở dữ liệu. \newline
+4. Hệ thống trả về báo cáo tóm tắt số lượng bản ghi thành công và số dòng lỗi kèm nguyên nhân. \\ \hline
+\textbf{Luồng — Cập nhật / Xóa} &
+1. HR tìm kiếm nhân viên theo tên hoặc số CCCD. \newline
+2. Chọn bản ghi cần chỉnh sửa, cập nhật thông tin và xác nhận lưu; hoặc chọn \textit{Vô hiệu hóa} để chuyển trạng thái sang \texttt{INACTIVE} thay vì xóa vật lý. \newline
+3. Hệ thống ghi nhật ký thay đổi với thời gian và tài khoản thực hiện. \\ \hline
+\textbf{Luồng sự kiện phát sinh} &
+3a. Số CCCD đã tồn tại trong hệ thống $\rightarrow$ Trả lỗi HTTP 409 Conflict, hiển thị thông báo trùng mã định danh. \newline
+2b. Tệp Excel sai định dạng cột $\rightarrow$ Hệ thống từ chối toàn bộ tệp và trả thông báo lỗi cấu trúc. \\ \hline
+\end{tabular}
+\end{table}
+
+% -------------------------------------------------------
+\section*{A.2 Đặc tả Use Case: Cấu hình và quản lý thiết bị trạm}
+\label{appendix:uc_device}
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\caption{Bảng đặc tả Use Case cấu hình thiết bị trạm}
+\label{tab:uc_device_config}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{10.1cm}|}
+\hline
+\textbf{Thuộc tính thông tin} & \textbf{Nội dung đặc tả chi tiết} \\ \hline
+\textbf{Tên Use Case} & Cấu hình và quản lý thiết bị trạm đầu cuối \\ \hline
+\textbf{Tác nhân chính} & Admin hệ thống (\texttt{ADMIN}) \\ \hline
+\textbf{Tiền điều kiện} & Tài khoản Admin đã đăng nhập hợp lệ. Bo mạch ESP32 đã được lắp đặt vật lý và kết nối mạng nội bộ. \\ \hline
+\textbf{Hậu điều kiện} & Bản ghi thiết bị được tạo hoặc cập nhật trong bảng \texttt{devices}. Ứng dụng Android tại trạm có thể đăng ký định danh và nhận lệnh điều khiển qua MQTT Topic tương ứng. \\ \hline
+\textbf{Luồng sự kiện chính} &
+1. Admin truy cập phân hệ \textit{Quản lý thiết bị} trên Web Dashboard. \newline
+2. Chọn \textit{Thêm thiết bị mới}, nhập mã định danh duy nhất \texttt{device\_code} (tối đa 50 ký tự) và tên vị trí lắp đặt \texttt{location\_name}. \newline
+3. Hệ thống tạo bản ghi trong bảng \texttt{devices} với trạng thái mặc định \texttt{is\_online = false}. \newline
+4. Admin cấu hình ứng dụng Android tại trạm nhập đúng \texttt{device\_code} để đăng ký kết nối. \newline
+5. Khi trạm kết nối lần đầu, Backend cập nhật \texttt{is\_online = true} và ghi nhận thời gian đồng bộ \texttt{last\_sync}. \newline
+6. Admin thiết lập ma trận phân quyền: liên kết danh sách nhân viên được phép vào cửa tương ứng với thiết bị qua bảng \texttt{access\_permissions}, gồm khoảng thời gian hiệu lực (\texttt{start\_date}, \texttt{end\_date}) và khung giờ cho phép (\texttt{start\_time}, \texttt{end\_time}). \\ \hline
+\textbf{Luồng sự kiện phát sinh} &
+2a. Mã \texttt{device\_code} đã tồn tại $\rightarrow$ Hệ thống trả lỗi trùng mã, yêu cầu nhập lại. \newline
+5a. Trạm không phản hồi sau 30 giây $\rightarrow$ Web Dashboard hiển thị trạng thái \texttt{OFFLINE} và gửi cảnh báo cho OPERATOR. \\ \hline
+\end{tabular}
+\end{table}
+
+% -------------------------------------------------------
+\section*{A.3 Đặc tả Use Case: Xem báo cáo và xuất dữ liệu}
+\label{appendix:uc_report}
+
+\begin{table}[ht!]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\caption{Bảng đặc tả Use Case xem báo cáo và kết xuất dữ liệu}
+\label{tab:uc_report}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{10.1cm}|}
+\hline
+\textbf{Thuộc tính thông tin} & \textbf{Nội dung đặc tả chi tiết} \\ \hline
+\textbf{Tên Use Case} & Xem báo cáo điểm danh và kết xuất dữ liệu \\ \hline
+\textbf{Tác nhân chính} & Quản lý HR (\texttt{HR\_MANAGER}), Bảo vệ / Vận hành (\texttt{OPERATOR}) \\ \hline
+\textbf{Tiền điều kiện} & Hệ thống đã tích lũy nhật ký điểm danh trong bảng \texttt{attendance\_logs}. Người dùng đã đăng nhập với vai trò tương ứng. \\ \hline
+\textbf{Hậu điều kiện} & Người dùng xem được dữ liệu điểm danh theo bộ lọc đã chọn. Tệp xuất Excel hoặc PDF được tải về máy nếu yêu cầu kết xuất. \\ \hline
+\textbf{Luồng sự kiện chính} &
+1. Người dùng truy cập giao diện \textit{Lịch sử điểm danh} trên Web Dashboard. \newline
+2. Áp dụng bộ lọc: khoảng thời gian (ngày bắt đầu — ngày kết thúc), tên nhân viên hoặc số CCCD, mã thiết bị, trạng thái log (\texttt{SUCCESS} / \texttt{FAILED}). \newline
+3. Hệ thống truy vấn bảng \texttt{attendance\_logs} theo điều kiện lọc và phân trang kết quả (tối đa 50 dòng mỗi trang). \newline
+4. Mỗi dòng hiển thị ảnh chip DG2 song song với ảnh selfie thực tế, điểm tương đồng Cosine, trạng thái từng lớp xác thực và thời gian quét. \newline
+5. Người dùng chọn \textit{Xuất Excel} để tải tệp \texttt{.xlsx} hoặc \textit{Xuất PDF} để in báo cáo chính thức. \\ \hline
+\textbf{Luồng — Giám sát thời gian thực (OPERATOR)} &
+1. OPERATOR mở tab \textit{Giám sát trực tiếp} để theo dõi luồng WebSocket. \newline
+2. Mỗi lượt điểm danh thành công được đẩy tự động xuất hiện tại đầu danh sách trong vòng dưới 1 giây. \newline
+3. OPERATOR có thể kích hoạt lệnh mở cửa khẩn cấp từ xa qua nút \textit{Mở cửa thủ công} khi có sự cố nhân sự. \\ \hline
+\textbf{Luồng sự kiện phát sinh} &
+3a. Không tìm thấy kết quả theo bộ lọc $\rightarrow$ Hệ thống hiển thị thông báo dữ liệu trống, gợi ý điều chỉnh khoảng thời gian. \newline
+5a. Tập dữ liệu lớn hơn 10.000 dòng $\rightarrow$ Hệ thống xử lý tác vụ xuất file bất đồng bộ, gửi thông báo qua email khi hoàn tất. \\ \hline
+\end{tabular}
+\end{table}
+
+\end{document}

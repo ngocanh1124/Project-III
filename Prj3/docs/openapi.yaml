@@ -1,0 +1,290 @@
+openapi: 3.0.1
+info:
+  title: CCCD Attendance API
+  version: "1.0.0"
+  description: |
+    REST API for device events, face comparison, employee management and admin flows.
+servers:
+  - url: http://localhost:8080
+    description: Local server
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a new user (sends OTP to email)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationDTO'
+      responses:
+        '200':
+          description: OTP sent
+        '400':
+          description: Validation / invalid org code
+
+  /api/auth/verify-otp:
+    post:
+      summary: Verify registration OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                otpCode:
+                  type: string
+      responses:
+        '200':
+          description: Verified
+        '400':
+          description: Invalid or expired OTP
+
+  /api/auth/login:
+    post:
+      summary: Login and obtain JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/v1/device/{deviceCode}/event:
+    post:
+      summary: Device posts a scan event (also via MQTT)
+      parameters:
+        - in: path
+          name: deviceCode
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceEvent'
+      responses:
+        '200':
+          description: Event accepted
+
+  /api/v1/device/{deviceCode}/whitelist:
+    get:
+      summary: Get whitelist for device (for SQLite sync)
+      parameters:
+        - in: path
+          name: deviceCode
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Whitelist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WhitelistEntry'
+
+  /api/v1/face/compare:
+    post:
+      summary: Server-side face compare (fallback)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaceCompareRequest'
+      responses:
+        '200':
+          description: Compare result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaceCompareResponse'
+
+  /api/v1/employees/import:
+    post:
+      summary: Import employees via Excel and images
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import accepted
+
+  /api/v1/attendance:
+    get:
+      summary: Query attendance logs
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: device
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attendance list
+
+components:
+  schemas:
+    UserRegistrationDTO:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        organizationCode:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            username:
+              type: string
+            email:
+              type: string
+
+    DeviceEvent:
+      type: object
+      properties:
+        deviceId:
+          type: string
+        doorId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        can:
+          type: string
+        cccd:
+          type: string
+        name:
+          type: string
+        chipPhotoUrl:
+          type: string
+        selfiePhotoUrl:
+          type: string
+        result:
+          type: string
+          enum: [accepted, rejected, fallback]
+        score:
+          type: number
+          format: float
+
+    FaceCompareRequest:
+      type: object
+      properties:
+        cccd:
+          type: string
+        selfieBase64:
+          type: string
+        selfieVector:
+          type: array
+          items:
+            type: number
+
+    FaceCompareResponse:
+      type: object
+      properties:
+        result:
+          type: string
+          enum: [accepted, rejected, unknown]
+        bestMatch:
+          type: object
+          properties:
+            cccd:
+              type: string
+            score:
+              type: number
+        fallbackUsed:
+          type: boolean
+
+    WhitelistEntry:
+      type: object
+      properties:
+        cccd:
+          type: string
+        fullName:
+          type: string
+        vector:
+          type: array
+          items:
+            type: number
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+
+x-mqtt-topics:
+  description: MQTT topics recommended for device-server-web communication
+  topics:
+    - topic: device/{organizationCode}/{deviceCode}/event
+      direction: device -> server
+      payload: DeviceEvent
+    - topic: device/{organizationCode}/{deviceCode}/signal
+      direction: server -> device
+      payload: '{ type: "open"|"close"|"config_update", reason?: string }'
+    - topic: server/{organizationCode}/whitelist/update
+      direction: server -> devices
+      payload: '{ action: "replace"|"patch", entries: [WhitelistEntry] }'
+    - topic: device/{organizationCode}/{deviceCode}/heartbeat
+      direction: device -> server
+      payload: '{ deviceCode, status, ip, uptime, timestamp }'
+
+contact:
+  name: System Integrator
+  email: devops@example.local

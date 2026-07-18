@@ -1,0 +1,15 @@
+# Wokwi Project Config
+# Dùng với VS Code extension "Wokwi Simulator"
+# Extension: https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vscode
+
+[wokwi]
+version = 1
+
+# Đường dẫn tới file binary sau khi compile (Arduino IDE / arduino-cli)
+# Sau khi Build (Ctrl+Alt+B) trong Arduino IDE 2.x:
+# elf = "build/esp32.esp32.esp32/esp32_wokwi_mqtt.ino.elf"
+#
+# Nếu dùng PlatformIO:
+# elf = ".pio/build/esp32dev/firmware.elf"
+#
+# Tạm thời để trống để dùng trực tiếp trên wokwi.com (không cần compile)

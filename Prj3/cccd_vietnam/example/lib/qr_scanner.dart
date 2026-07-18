@@ -1,0 +1,238 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'package:camera/camera.dart';
+import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+
+class QrScanner extends StatefulWidget {
+  final Function(String) onCanDetected;
+
+  const QrScanner({Key? key, required this.onCanDetected}) : super(key: key);
+
+  @override
+  _QrScannerState createState() => _QrScannerState();
+}
+
+class _QrScannerState extends State<QrScanner> {
+  final BarcodeScanner _barcodeScanner = BarcodeScanner();
+  CameraController? _cameraController;
+  List<CameraDescription>? _cameras;
+  bool _isCameraInitialized = false;
+  bool _isProcessing = false;
+  String _scanResult = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      _cameras = await availableCameras();
+      if (_cameras != null && _cameras!.isNotEmpty) {
+        _cameraController = CameraController(
+          _cameras![0],
+          ResolutionPreset.high,
+          enableAudio: false,
+        );
+        await _cameraController!.initialize();
+        _cameraController!.startImageStream(_processImage);
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _barcodeScanner.close();
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _processImage(CameraImage image) async {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    try {
+      Uint8List bytes;
+      InputImageFormat inputImageFormat;
+      int bytesPerRow;
+
+      if (image.format.group == ImageFormatGroup.yuv420) {
+        final planeY = image.planes[0];
+        final planeU = image.planes[1];
+        final planeV = image.planes[2];
+
+        final width = image.width;
+        final height = image.height;
+        final int ySize = planeY.bytes.length;
+        final int uvSize = planeU.bytes.length;
+
+        final Uint8List nv21 = Uint8List(ySize + uvSize * 2);
+        nv21.setRange(0, ySize, planeY.bytes);
+
+        int uvIndex = ySize;
+        for (int i = 0; i < uvSize; i++) {
+          nv21[uvIndex++] = planeV.bytes[i];
+          nv21[uvIndex++] = planeU.bytes[i];
+        }
+
+        bytes = nv21;
+        inputImageFormat = InputImageFormat.nv21;
+        bytesPerRow = planeY.bytesPerRow;
+      } else {
+        bytes = image.planes[0].bytes;
+        inputImageFormat = InputImageFormat.bgra8888;
+        bytesPerRow = image.planes[0].bytesPerRow;
+      }
+
+      final inputImage = InputImage.fromBytes(
+        bytes: bytes,
+        metadata: InputImageMetadata(
+          size: Size(image.width.toDouble(), image.height.toDouble()),
+          rotation: InputImageRotation.rotation0deg,
+          format: inputImageFormat,
+          bytesPerRow: bytesPerRow,
+        ),
+      );
+
+      final barcodes = await _barcodeScanner.processImage(inputImage);
+      for (final barcode in barcodes) {
+        if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+          final qrData = barcode.rawValue!;
+          print("QR Detected: $qrData");
+          
+          // Dừng stream ngay lập tức để tránh quét lặp lại khi đang xử lý
+          await _cameraController?.stopImageStream();
+          
+          // Trả về dữ liệu RAW cho parent xử lý parsing đầy đủ
+          widget.onCanDetected(qrData);
+          return;
+        }
+      }
+    } catch (e) {
+      print('Error processing image: $e');
+      setState(() => _scanResult = 'Error: $e');
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: _isCameraInitialized
+              ? Stack(
+                  children: [
+                    CameraPreview(_cameraController!),
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: QrScannerOverlay(),
+                          isComplex: true,
+                        ),
+                      ),
+                      Positioned(
+                        top: 20,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          color: Colors.black54,
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Đặt mã QR trên CCCD vào khung quét',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_scanResult.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  _scanResult,
+                                  style: TextStyle(
+                                    color: _scanResult.startsWith('Error')
+                                        ? Colors.red
+                                        : Colors.green,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ]
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Đang khởi tạo camera...'),
+                      ],
+                    ),
+                  ),
+          ),
+      ],
+    );
+  }
+}
+
+class QrScannerOverlay extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double scannerSize = size.width * 0.7;
+    final Rect rect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: scannerSize,
+      height: scannerSize,
+    );
+
+    // saveLayer so BlendMode.clear punches a transparent hole through the overlay
+    canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..color = Colors.black54
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRect(rect, Paint()..blendMode = BlendMode.clear);
+    canvas.restore();
+
+    // Corner brackets for alignment guides
+    final Paint cornerPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    const double cornerLen = 24.0;
+
+    // Top-left
+    canvas.drawLine(rect.topLeft, rect.topLeft.translate(cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.topLeft, rect.topLeft.translate(0, cornerLen), cornerPaint);
+    // Top-right
+    canvas.drawLine(rect.topRight, rect.topRight.translate(-cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.topRight, rect.topRight.translate(0, cornerLen), cornerPaint);
+    // Bottom-left
+    canvas.drawLine(rect.bottomLeft, rect.bottomLeft.translate(cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.bottomLeft, rect.bottomLeft.translate(0, -cornerLen), cornerPaint);
+    // Bottom-right
+    canvas.drawLine(rect.bottomRight, rect.bottomRight.translate(-cornerLen, 0), cornerPaint);
+    canvas.drawLine(rect.bottomRight, rect.bottomRight.translate(0, -cornerLen), cornerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

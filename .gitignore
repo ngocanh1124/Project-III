@@ -1,0 +1,113 @@
+# =====================
+# Flutter / Dart
+# =====================
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+*.apk
+*.aab
+.idea/
+*.iml
+
+# =====================
+# Python / Flask
+# =====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.venv_insight/
+.venv_insight39/
+venv/
+**/.venv*/
+**/venv/
+*.egg-info/
+dist-info/
+.env
+*.sqlite3
+
+# =====================
+# Java / Spring Boot
+# =====================
+# Build output
+/target/
+
+# Secrets
+**/Prj3/.env.properties
+**/Prj3/.env
+*.class
+*.jar
+*.war
+# Ignore Java libraries (only in Maven project root)
+Prj3/lib/
+**/oracleJdk-25/
+*.ear
+
+# IntelliJ / Eclipse
+*.iml
+.idea/
+*.ipr
+*.iws
+*.classpath
+*.project
+*.settings/
+
+# Maven / Gradle
+.mvn/
+.mvn/wrapper/maven-wrapper.jar
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# OS files
+.DS_Store
+Thumbs.db
+/Prj3/src/main/java/prj3/example/Prj3/oracleJdk-25/
+
+# =====================
+# Reports, diagrams, docs (không push)
+# =====================
+BaoCaoChiTiet.html
+BIEU_DO_CHUONG2.html
+GIAI_THICH_CODE.html
+build_log.txt
+*.log
+strip*.py
+strip_comments*.py
+
+# Firebase sensitive files
+google-services.json
+google-services.plist
+**/GoogleService-Info.plist
+**/firebase*
+
+# Flutter
+**/example/web_listener.html
+**/example/linux/
+**/example/macos/
+**/example/windows/
+
+# =====================
+# React build output
+# =====================
+dashboard-react/build/
+dashboard-react/node_modules/
+
+# =====================
+# Node
+# =====================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# =====================
+# Misc
+# =====================
+*.class
+*.jar
+!Prj3/mvnw
+!Prj3/mvnw.cmd

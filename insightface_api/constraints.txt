@@ -1,0 +1,6 @@
+# Pin numpy<2.0 - torch 2.2.2 was compiled with numpy 1.x ABI
+# Installing insightface or albumentations>=2.0 will try to bump numpy to 2.x
+# Always run: pip install -c constraints.txt <package>
+# Or after any pip install, run: pip install -c constraints.txt .
+numpy<2.0.0
+albumentations<2.0.0

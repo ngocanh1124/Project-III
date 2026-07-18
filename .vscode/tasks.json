@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Spring Boot Backend",
+			"type": "shell",
+			"command": "cd D:\\Prj3\\Prj3 && \"C:\\Users\\anmay\\Downloads\\apache-maven-3.9.11-bin\\apache-maven-3.9.11\\bin\\mvn.cmd\" spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Start Spring Boot Backend",
+			"type": "shell",
+			"command": "Set-Location D:\\Prj3\\Prj3; & 'C:\\Users\\anmay\\Downloads\\apache-maven-3.9.11-bin\\apache-maven-3.9.11\\bin\\mvn.cmd' spring-boot:run",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}
